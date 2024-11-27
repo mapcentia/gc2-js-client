@@ -1,0 +1,25 @@
+<script src="../build/gc2-js-client.js"></script>
+
+<script>
+    const codeFlow = new gc2.CodeFlow({
+        redirectUri: 'http://127.0.0.1:8000/examples',
+        clientId: '1234',
+        host: 'http://127.0.0.1:8080'
+    })
+    codeFlow.redirectHandle().then(res => {
+        console.log(res)
+    }).catch(err => alert(err))
+
+    const sql = new gc2.Sql()
+
+    const getData = () => {
+        sql.select('select 1').then(data => {
+            console.log(data)
+        }).catch(e => alert(e))
+    }
+
+</script>
+
+<button id="login-btn" style="display: inline" onclick="codeFlow.signin()">Login</button>
+<button id="logout-btn" style="display: none" onclick="codeFlow.signout()">Logout</button>
+<button id="run" style="display: inline" onclick="getData()">Run select</button>
