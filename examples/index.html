@@ -31,8 +31,8 @@
         clientId: '67485f325ab8c',
         host: 'https://nt-test.admin.gc2.io'
     })
-    codeFlow.redirectHandle().then(res => {
-        if (res) {
+    codeFlow.redirectHandle().then(isSignedIn => {
+        if (isSignedIn) {
             getData()
             document.querySelector('#login-btn').style.display = 'none'
             document.querySelector('#logout-btn').style.display = 'inline'

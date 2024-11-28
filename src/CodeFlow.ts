@@ -23,7 +23,7 @@ export default class CodeFlow {
 
         if (queryString.code) {
             if (queryString.state !== localStorage.getItem('state')) {
-                return Promise.reject('Possible CSRF attack. Aborting login???')
+                return Promise.reject('Possible CSRF attack. Aborting login!')
             }
             try {
                 const {
