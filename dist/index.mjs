@@ -1,31 +1,3 @@
-"use strict";
-var __create = Object.create;
-var __defProp = Object.defineProperty;
-var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
-var __getOwnPropNames = Object.getOwnPropertyNames;
-var __getProtoOf = Object.getPrototypeOf;
-var __hasOwnProp = Object.prototype.hasOwnProperty;
-var __export = (target, all) => {
-  for (var name in all)
-    __defProp(target, name, { get: all[name], enumerable: true });
-};
-var __copyProps = (to, from, except, desc) => {
-  if (from && typeof from === "object" || typeof from === "function") {
-    for (let key of __getOwnPropNames(from))
-      if (!__hasOwnProp.call(to, key) && key !== except)
-        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
-  }
-  return to;
-};
-var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
-  // If the importer is in node compatibility mode or this is not an ESM
-  // file that has been converted to a CommonJS file using a Babel-
-  // compatible transform (i.e. "__esModule" has not been set), then set
-  // "default" to the CommonJS "module.exports" for node compatibility.
-  isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
-  mod
-));
-var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 var __async = (__this, __arguments, generator) => {
   return new Promise((resolve, reject) => {
     var fulfilled = (value) => {
@@ -47,20 +19,13 @@ var __async = (__this, __arguments, generator) => {
   });
 };
 
-// src/CodeFlow.ts
-var CodeFlow_exports = {};
-__export(CodeFlow_exports, {
-  default: () => CodeFlow
-});
-module.exports = __toCommonJS(CodeFlow_exports);
-
 // src/services/gc2.services.ts
-var import_axios = __toESM(require("axios"));
-var querystring = __toESM(require("querystring"));
+import axios, { AxiosError } from "axios";
+import * as querystring from "querystring";
 var Gc2Service = class {
   constructor(options) {
     this.options = options;
-    this.http = import_axios.default.create({
+    this.http = axios.create({
       baseURL: this.options.host
     });
   }
@@ -96,7 +61,7 @@ var Gc2Service = class {
         }
       ).then(({ data }) => data).catch((error) => {
         var _a;
-        if (error instanceof import_axios.AxiosError) {
+        if (error instanceof AxiosError) {
           const err = (_a = error.response) == null ? void 0 : _a.data;
           if (err.error === "authorization_pending") {
             return null;
@@ -189,7 +154,7 @@ var Gc2Service = class {
 };
 
 // src/util/utils.ts
-var import_jwt_decode = require("jwt-decode");
+import { jwtDecode } from "jwt-decode";
 var generatePkceChallenge = () => __async(void 0, null, function* () {
   const generateRandomString = () => {
     const array = new Uint32Array(28);
@@ -223,7 +188,7 @@ var generatePkceChallenge = () => __async(void 0, null, function* () {
 });
 var isTokenExpired = (token) => {
   let isJwtExpired = false;
-  const { exp } = (0, import_jwt_decode.jwtDecode)(token);
+  const { exp } = jwtDecode(token);
   const currentTime = (/* @__PURE__ */ new Date()).getTime() / 1e3;
   if (exp) {
     if (currentTime > exp) isJwtExpired = true;
@@ -263,9 +228,22 @@ var setOptions = (options) => {
   if (options.host) localStorage.setItem("host", options.host);
   if (options.redirectUri) localStorage.setItem("redirectUri", options.redirectUri);
 };
+var getTokens = () => {
+  return {
+    accessToken: localStorage.getItem("accessToken") || "",
+    refreshToken: localStorage.getItem("refreshToken") || ""
+  };
+};
+var getOptions = () => {
+  return {
+    clientId: localStorage.getItem("clientId") || "",
+    host: localStorage.getItem("host") || "",
+    redirectUri: localStorage.getItem("redirectUri") || ""
+  };
+};
 
 // src/CodeFlow.ts
-var import_querystring = __toESM(require("querystring"));
+import querystring2 from "querystring";
 var CodeFlow = class {
   constructor(options) {
     this.options = options;
@@ -274,7 +252,7 @@ var CodeFlow = class {
   redirectHandle() {
     return __async(this, null, function* () {
       const url = window.location.search.substring(1);
-      const queryString = import_querystring.default.parse(url);
+      const queryString = querystring2.parse(url);
       if (queryString.error) {
         return Promise.reject(new Error(`Failed to redirect: ${url}`));
       }
@@ -314,4 +292,84 @@ var CodeFlow = class {
     });
   }
 };
-//# sourceMappingURL=CodeFlow.js.map
+
+// src/util/request-headers.ts
+var getHeaders = (contentType = "application/json") => __async(void 0, null, function* () {
+  const options = getOptions();
+  const service = new Gc2Service(options);
+  if (!(yield isLogin(service))) {
+    return Promise.reject("Is not logged in");
+  }
+  const { accessToken } = getTokens();
+  const headers = {
+    Accept: "application/json",
+    Cookie: "XDEBUG_SESSION=XDEBUG_ECLIPSE",
+    Authorization: accessToken ? "Bearer " + accessToken : null
+  };
+  if (contentType) {
+    headers["Content-Type"] = contentType;
+  }
+  return headers;
+});
+var request_headers_default = getHeaders;
+
+// src/util/make-request.ts
+var make = (version, resource, method, payload, contentType = "application/json") => __async(void 0, null, function* () {
+  const options = getOptions();
+  const headers = yield request_headers_default(contentType);
+  let request = {
+    method,
+    headers,
+    redirect: "manual"
+  };
+  if (payload) {
+    request.body = contentType === "application/json" ? JSON.stringify(payload) : payload;
+  }
+  return yield fetch(options.host + `/api/v${version}/${resource}`, request);
+});
+var make_request_default = make;
+
+// src/util/get-response.ts
+var get = (response, expectedCode, doNotExit = false) => __async(void 0, null, function* () {
+  let res = null;
+  if (![204, 303].includes(expectedCode)) {
+    res = yield response.json();
+  }
+  if (response.status !== expectedCode) {
+    if (res === null) {
+      res = yield response.json();
+    }
+  }
+  return res;
+});
+var get_response_default = get;
+
+// src/Sql.ts
+var Sql = class {
+  constructor() {
+  }
+  select(query) {
+    return __async(this, null, function* () {
+      const body = { q: query };
+      const response = yield make_request_default("4", `sql`, "POST", body);
+      return yield get_response_default(response, 200);
+    });
+  }
+};
+
+// src/index.ts
+module.exports = {
+  CodeFlow,
+  Sql
+};
+export {
+  CodeFlow,
+  Sql
+};
+/**
+ * @author     Martin Høgh <mh@mapcentia.com>
+ * @copyright  2013-2024 MapCentia ApS
+ * @license    http://www.gnu.org/licenses/#AGPL  GNU AFFERO GENERAL PUBLIC LICENSE 3
+ *
+ */
+//# sourceMappingURL=index.mjs.map

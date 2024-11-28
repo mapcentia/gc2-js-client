@@ -23,16 +23,6 @@ type GetTokenResponse = {
     scope: string;
 };
 
-type GetUserInfoResponse = {
-    sub: string;
-    email_verified: boolean;
-    name: string;
-    preferred_username: string;
-    given_name: string;
-    family_name: string;
-    email: string;
-};
-
 export class Gc2Service {
     http: AxiosInstance
     options: Options
@@ -172,5 +162,15 @@ export class Gc2Service {
                 },
             ).then(({data}) => data).catch(err => {
             })
+    }
+
+    clearTokens(): void {
+        localStorage.removeItem('accessToken')
+        localStorage.removeItem('refreshToken')
+    }
+    clearOptions(): void {
+        localStorage.removeItem('clientId')
+        localStorage.removeItem('host')
+        localStorage.removeItem('redirectUri')
     }
 }

@@ -1,31 +1,3 @@
-"use strict";
-var __create = Object.create;
-var __defProp = Object.defineProperty;
-var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
-var __getOwnPropNames = Object.getOwnPropertyNames;
-var __getProtoOf = Object.getPrototypeOf;
-var __hasOwnProp = Object.prototype.hasOwnProperty;
-var __export = (target, all) => {
-  for (var name in all)
-    __defProp(target, name, { get: all[name], enumerable: true });
-};
-var __copyProps = (to, from, except, desc) => {
-  if (from && typeof from === "object" || typeof from === "function") {
-    for (let key of __getOwnPropNames(from))
-      if (!__hasOwnProp.call(to, key) && key !== except)
-        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
-  }
-  return to;
-};
-var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
-  // If the importer is in node compatibility mode or this is not an ESM
-  // file that has been converted to a CommonJS file using a Babel-
-  // compatible transform (i.e. "__esModule" has not been set), then set
-  // "default" to the CommonJS "module.exports" for node compatibility.
-  isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
-  mod
-));
-var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 var __async = (__this, __arguments, generator) => {
   return new Promise((resolve, reject) => {
     var fulfilled = (value) => {
@@ -47,18 +19,66 @@ var __async = (__this, __arguments, generator) => {
   });
 };
 
-// src/services/gc2.services.ts
-var gc2_services_exports = {};
-__export(gc2_services_exports, {
-  Gc2Service: () => Gc2Service
+// src/util/utils.ts
+import { jwtDecode } from "jwt-decode";
+var isTokenExpired = (token) => {
+  let isJwtExpired = false;
+  const { exp } = jwtDecode(token);
+  const currentTime = (/* @__PURE__ */ new Date()).getTime() / 1e3;
+  if (exp) {
+    if (currentTime > exp) isJwtExpired = true;
+  }
+  return isJwtExpired;
+};
+var isLogin = (gc2) => __async(void 0, null, function* () {
+  const accessToken = localStorage.getItem("accessToken");
+  const refreshToken = localStorage.getItem("refreshToken");
+  if (!accessToken && !refreshToken) {
+    return false;
+  }
+  if (!accessToken || accessToken && isTokenExpired(accessToken)) {
+    if (refreshToken && isTokenExpired(refreshToken)) {
+      console.error("Refresh token has expired. Please login again");
+      return false;
+    }
+    if (refreshToken) {
+      try {
+        const data = yield gc2.getRefreshToken(refreshToken);
+        setTokens({ accessToken: data.access_token, refreshToken });
+        console.log("Access token refreshed");
+      } catch (e) {
+        console.error("Could not get refresh token");
+        return false;
+      }
+    }
+  }
+  return true;
 });
-module.exports = __toCommonJS(gc2_services_exports);
-var import_axios = __toESM(require("axios"));
-var querystring = __toESM(require("querystring"));
+var setTokens = (tokens) => {
+  localStorage.setItem("accessToken", tokens.accessToken);
+  localStorage.setItem("refreshToken", tokens.refreshToken);
+};
+var getTokens = () => {
+  return {
+    accessToken: localStorage.getItem("accessToken") || "",
+    refreshToken: localStorage.getItem("refreshToken") || ""
+  };
+};
+var getOptions = () => {
+  return {
+    clientId: localStorage.getItem("clientId") || "",
+    host: localStorage.getItem("host") || "",
+    redirectUri: localStorage.getItem("redirectUri") || ""
+  };
+};
+
+// src/services/gc2.services.ts
+import axios, { AxiosError } from "axios";
+import * as querystring from "querystring";
 var Gc2Service = class {
   constructor(options) {
     this.options = options;
-    this.http = import_axios.default.create({
+    this.http = axios.create({
       baseURL: this.options.host
     });
   }
@@ -94,7 +114,7 @@ var Gc2Service = class {
         }
       ).then(({ data }) => data).catch((error) => {
         var _a;
-        if (error instanceof import_axios.AxiosError) {
+        if (error instanceof AxiosError) {
           const err = (_a = error.response) == null ? void 0 : _a.data;
           if (err.error === "authorization_pending") {
             return null;
@@ -185,8 +205,33 @@ var Gc2Service = class {
     });
   }
 };
-// Annotate the CommonJS export names for ESM import in node:
-0 && (module.exports = {
-  Gc2Service
+
+// src/util/request-headers.ts
+var getHeaders = (contentType = "application/json") => __async(void 0, null, function* () {
+  const options = getOptions();
+  const service = new Gc2Service(options);
+  if (!(yield isLogin(service))) {
+    return Promise.reject("Is not logged in");
+  }
+  const { accessToken } = getTokens();
+  const headers = {
+    Accept: "application/json",
+    Cookie: "XDEBUG_SESSION=XDEBUG_ECLIPSE",
+    Authorization: accessToken ? "Bearer " + accessToken : null
+  };
+  if (contentType) {
+    headers["Content-Type"] = contentType;
+  }
+  return headers;
 });
-//# sourceMappingURL=gc2.services.js.map
+var request_headers_default = getHeaders;
+export {
+  request_headers_default as default
+};
+/**
+ * @author     Martin Høgh <mh@mapcentia.com>
+ * @copyright  2013-2024 MapCentia ApS
+ * @license    http://www.gnu.org/licenses/#AGPL  GNU AFFERO GENERAL PUBLIC LICENSE 3
+ *
+ */
+//# sourceMappingURL=request-headers.mjs.map

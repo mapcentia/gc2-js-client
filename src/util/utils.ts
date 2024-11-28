@@ -71,7 +71,7 @@ export const passwordIsStrongEnough = (password: string, allowNull: boolean = fa
     return true
 }
 
-export const isLogin = async (gc2: Gc2Service) => {
+export const isLogin = async (gc2: Gc2Service): Promise<boolean> => {
     const accessToken = localStorage.getItem('accessToken')
     const refreshToken = localStorage.getItem('refreshToken')
     if (!accessToken && !refreshToken) {
@@ -79,8 +79,7 @@ export const isLogin = async (gc2: Gc2Service) => {
     }
     if (!accessToken || (accessToken && isTokenExpired(accessToken))) {
         if (refreshToken && isTokenExpired(refreshToken)) {
-            console.error('Refresh token has expired. Please login again')
-            return false
+            throw new Error('Refresh token has expired. Please login again.')
         }
         if (refreshToken) {
             try {
@@ -88,8 +87,7 @@ export const isLogin = async (gc2: Gc2Service) => {
                 setTokens({accessToken: data.access_token, refreshToken})
                 console.log('Access token refreshed')
             } catch (e) {
-                console.error('Could not get refresh token')
-                return false
+                throw new Error('Could not get refresh token.')
             }
         }
     }

@@ -1,31 +1,3 @@
-"use strict";
-var __create = Object.create;
-var __defProp = Object.defineProperty;
-var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
-var __getOwnPropNames = Object.getOwnPropertyNames;
-var __getProtoOf = Object.getPrototypeOf;
-var __hasOwnProp = Object.prototype.hasOwnProperty;
-var __export = (target, all) => {
-  for (var name in all)
-    __defProp(target, name, { get: all[name], enumerable: true });
-};
-var __copyProps = (to, from, except, desc) => {
-  if (from && typeof from === "object" || typeof from === "function") {
-    for (let key of __getOwnPropNames(from))
-      if (!__hasOwnProp.call(to, key) && key !== except)
-        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
-  }
-  return to;
-};
-var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
-  // If the importer is in node compatibility mode or this is not an ESM
-  // file that has been converted to a CommonJS file using a Babel-
-  // compatible transform (i.e. "__esModule" has not been set), then set
-  // "default" to the CommonJS "module.exports" for node compatibility.
-  isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
-  mod
-));
-var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 var __async = (__this, __arguments, generator) => {
   return new Promise((resolve, reject) => {
     var fulfilled = (value) => {
@@ -47,18 +19,11 @@ var __async = (__this, __arguments, generator) => {
   });
 };
 
-// src/util/request-headers.ts
-var request_headers_exports = {};
-__export(request_headers_exports, {
-  default: () => request_headers_default
-});
-module.exports = __toCommonJS(request_headers_exports);
-
 // src/util/utils.ts
-var import_jwt_decode = require("jwt-decode");
+import { jwtDecode } from "jwt-decode";
 var isTokenExpired = (token) => {
   let isJwtExpired = false;
-  const { exp } = (0, import_jwt_decode.jwtDecode)(token);
+  const { exp } = jwtDecode(token);
   const currentTime = (/* @__PURE__ */ new Date()).getTime() / 1e3;
   if (exp) {
     if (currentTime > exp) isJwtExpired = true;
@@ -108,12 +73,12 @@ var getOptions = () => {
 };
 
 // src/services/gc2.services.ts
-var import_axios = __toESM(require("axios"));
-var querystring = __toESM(require("querystring"));
+import axios, { AxiosError } from "axios";
+import * as querystring from "querystring";
 var Gc2Service = class {
   constructor(options) {
     this.options = options;
-    this.http = import_axios.default.create({
+    this.http = axios.create({
       baseURL: this.options.host
     });
   }
@@ -149,7 +114,7 @@ var Gc2Service = class {
         }
       ).then(({ data }) => data).catch((error) => {
         var _a;
-        if (error instanceof import_axios.AxiosError) {
+        if (error instanceof AxiosError) {
           const err = (_a = error.response) == null ? void 0 : _a.data;
           if (err.error === "authorization_pending") {
             return null;
@@ -260,10 +225,57 @@ var getHeaders = (contentType = "application/json") => __async(void 0, null, fun
   return headers;
 });
 var request_headers_default = getHeaders;
+
+// src/util/make-request.ts
+var make = (version, resource, method, payload, contentType = "application/json") => __async(void 0, null, function* () {
+  const options = getOptions();
+  const headers = yield request_headers_default(contentType);
+  let request = {
+    method,
+    headers,
+    redirect: "manual"
+  };
+  if (payload) {
+    request.body = contentType === "application/json" ? JSON.stringify(payload) : payload;
+  }
+  return yield fetch(options.host + `/api/v${version}/${resource}`, request);
+});
+var make_request_default = make;
+
+// src/util/get-response.ts
+var get = (response, expectedCode, doNotExit = false) => __async(void 0, null, function* () {
+  let res = null;
+  if (![204, 303].includes(expectedCode)) {
+    res = yield response.json();
+  }
+  if (response.status !== expectedCode) {
+    if (res === null) {
+      res = yield response.json();
+    }
+  }
+  return res;
+});
+var get_response_default = get;
+
+// src/Sql.ts
+var Sql = class {
+  constructor() {
+  }
+  select(query) {
+    return __async(this, null, function* () {
+      const body = { q: query };
+      const response = yield make_request_default("4", `sql`, "POST", body);
+      return yield get_response_default(response, 200);
+    });
+  }
+};
+export {
+  Sql as default
+};
 /**
  * @author     Martin Høgh <mh@mapcentia.com>
  * @copyright  2013-2024 MapCentia ApS
  * @license    http://www.gnu.org/licenses/#AGPL  GNU AFFERO GENERAL PUBLIC LICENSE 3
  *
  */
-//# sourceMappingURL=request-headers.js.map
+//# sourceMappingURL=Sql.mjs.map

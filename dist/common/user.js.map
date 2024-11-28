@@ -1,0 +1,1 @@
+{"version":3,"sources":["../../src/common/user.ts"],"sourcesContent":["export default interface User {\n  user: string;\n  host: string;\n  database: string;\n  token: string;\n  superUser: boolean;\n  refresh_token: string;\n}\n"],"mappings":";;;;;;;;;;;;;;;;AAAA;AAAA;","names":[]}

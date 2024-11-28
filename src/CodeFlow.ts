@@ -1,4 +1,4 @@
-import {Gc2Service} from './services/gc2.services'
+import {Gc2Service,} from './services/gc2.services'
 import {generatePkceChallenge, isLogin, setTokens, setOptions} from './util/utils'
 import querystring from "querystring";
 import {Options} from "./util/utils";
@@ -13,7 +13,7 @@ export default class CodeFlow {
         this.service = new Gc2Service(options)
     }
 
-    public async redirectHandle(): Promise<boolean|string> {
+    public async redirectHandle(): Promise<boolean | string> {
         const url = window.location.search.substring(1)
         const queryString = querystring.parse(url)
 
@@ -31,9 +31,22 @@ export default class CodeFlow {
                     refresh_token
                 } = await this.service.getAuthorizationCodeToken(queryString.code, localStorage.getItem('codeVerifier'))
                 setTokens({accessToken: access_token, refreshToken: refresh_token})
-                setOptions({clientId: this.options.clientId, host: this.options.host, redirectUri: this.options.redirectUri})
+                setOptions({
+                    clientId: this.options.clientId,
+                    host: this.options.host,
+                    redirectUri: this.options.redirectUri
+                })
                 localStorage.removeItem('state')
                 localStorage.removeItem('codeVerifier')
+
+                // Remove state and code from the redirect url
+                const params = new URLSearchParams(window.location.search);
+                params.delete('code')
+                params.delete('state')
+                const loc = window.location
+                const newUrl = loc.origin + loc.pathname + (params.size > 1 ? '?' + params.toString() : '')
+                history.pushState(null, '', newUrl);
+
                 return Promise.resolve(true)
 
             } catch (e: any) {
@@ -41,19 +54,26 @@ export default class CodeFlow {
             }
         }
         if (await isLogin(this.service)) {
+
             return Promise.resolve(true)
         }
+
         return Promise.resolve(false)
     }
 
-    public async signin(): Promise<void> {
+    public async signIn(): Promise<void> {
         const {state, codeVerifier, codeChallenge} = await generatePkceChallenge()
-        localStorage.setItem("state", state);
+        localStorage.setItem("state", state)
         localStorage.setItem("codeVerifier", codeVerifier);
         // @ts-ignore
         window.location = this.service.getAuthorizationCodeURL(
             codeChallenge,
             state,
         );
+    }
+
+    public signOut(): void {
+        this.service.clearTokens()
+        this.service.clearOptions()
     }
 }

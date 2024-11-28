@@ -1,31 +1,3 @@
-"use strict";
-var __create = Object.create;
-var __defProp = Object.defineProperty;
-var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
-var __getOwnPropNames = Object.getOwnPropertyNames;
-var __getProtoOf = Object.getPrototypeOf;
-var __hasOwnProp = Object.prototype.hasOwnProperty;
-var __export = (target, all) => {
-  for (var name in all)
-    __defProp(target, name, { get: all[name], enumerable: true });
-};
-var __copyProps = (to, from, except, desc) => {
-  if (from && typeof from === "object" || typeof from === "function") {
-    for (let key of __getOwnPropNames(from))
-      if (!__hasOwnProp.call(to, key) && key !== except)
-        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
-  }
-  return to;
-};
-var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
-  // If the importer is in node compatibility mode or this is not an ESM
-  // file that has been converted to a CommonJS file using a Babel-
-  // compatible transform (i.e. "__esModule" has not been set), then set
-  // "default" to the CommonJS "module.exports" for node compatibility.
-  isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
-  mod
-));
-var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 var __async = (__this, __arguments, generator) => {
   return new Promise((resolve, reject) => {
     var fulfilled = (value) => {
@@ -48,17 +20,12 @@ var __async = (__this, __arguments, generator) => {
 };
 
 // src/services/gc2.services.ts
-var gc2_services_exports = {};
-__export(gc2_services_exports, {
-  Gc2Service: () => Gc2Service
-});
-module.exports = __toCommonJS(gc2_services_exports);
-var import_axios = __toESM(require("axios"));
-var querystring = __toESM(require("querystring"));
+import axios, { AxiosError } from "axios";
+import * as querystring from "querystring";
 var Gc2Service = class {
   constructor(options) {
     this.options = options;
-    this.http = import_axios.default.create({
+    this.http = axios.create({
       baseURL: this.options.host
     });
   }
@@ -94,7 +61,7 @@ var Gc2Service = class {
         }
       ).then(({ data }) => data).catch((error) => {
         var _a;
-        if (error instanceof import_axios.AxiosError) {
+        if (error instanceof AxiosError) {
           const err = (_a = error.response) == null ? void 0 : _a.data;
           if (err.error === "authorization_pending") {
             return null;
@@ -185,8 +152,7 @@ var Gc2Service = class {
     });
   }
 };
-// Annotate the CommonJS export names for ESM import in node:
-0 && (module.exports = {
+export {
   Gc2Service
-});
-//# sourceMappingURL=gc2.services.js.map
+};
+//# sourceMappingURL=gc2.services.mjs.map
