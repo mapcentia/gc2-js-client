@@ -108,8 +108,7 @@ var isLogin = (gc2) => __async(void 0, null, function* () {
   }
   if (!accessToken || accessToken && isTokenExpired(accessToken)) {
     if (refreshToken && isTokenExpired(refreshToken)) {
-      console.error("Refresh token has expired. Please login again");
-      return false;
+      throw new Error("Refresh token has expired. Please login again.");
     }
     if (refreshToken) {
       try {
@@ -117,8 +116,7 @@ var isLogin = (gc2) => __async(void 0, null, function* () {
         setTokens({ accessToken: data.access_token, refreshToken });
         console.log("Access token refreshed");
       } catch (e) {
-        console.error("Could not get refresh token");
-        return false;
+        throw new Error("Could not get refresh token.");
       }
     }
   }

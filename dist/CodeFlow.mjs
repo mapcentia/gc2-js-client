@@ -151,6 +151,15 @@ var Gc2Service = class {
       });
     });
   }
+  clearTokens() {
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("refreshToken");
+  }
+  clearOptions() {
+    localStorage.removeItem("clientId");
+    localStorage.removeItem("host");
+    localStorage.removeItem("redirectUri");
+  }
 };
 
 // src/util/utils.ts
@@ -203,8 +212,7 @@ var isLogin = (gc2) => __async(void 0, null, function* () {
   }
   if (!accessToken || accessToken && isTokenExpired(accessToken)) {
     if (refreshToken && isTokenExpired(refreshToken)) {
-      console.error("Refresh token has expired. Please login again");
-      return false;
+      throw new Error("Refresh token has expired. Please login again.");
     }
     if (refreshToken) {
       try {
@@ -212,8 +220,7 @@ var isLogin = (gc2) => __async(void 0, null, function* () {
         setTokens({ accessToken: data.access_token, refreshToken });
         console.log("Access token refreshed");
       } catch (e) {
-        console.error("Could not get refresh token");
-        return false;
+        throw new Error("Could not get refresh token.");
       }
     }
   }
@@ -253,9 +260,19 @@ var CodeFlow = class {
             refresh_token
           } = yield this.service.getAuthorizationCodeToken(queryString.code, localStorage.getItem("codeVerifier"));
           setTokens({ accessToken: access_token, refreshToken: refresh_token });
-          setOptions({ clientId: this.options.clientId, host: this.options.host, redirectUri: this.options.redirectUri });
+          setOptions({
+            clientId: this.options.clientId,
+            host: this.options.host,
+            redirectUri: this.options.redirectUri
+          });
           localStorage.removeItem("state");
           localStorage.removeItem("codeVerifier");
+          const params = new URLSearchParams(window.location.search);
+          params.delete("code");
+          params.delete("state");
+          const loc = window.location;
+          const newUrl = loc.origin + loc.pathname + (params.size > 1 ? "?" + params.toString() : "");
+          history.pushState(null, "", newUrl);
           return Promise.resolve(true);
         } catch (e) {
           return Promise.reject(`Failed to redirect: ${url}`);
@@ -267,7 +284,7 @@ var CodeFlow = class {
       return Promise.resolve(false);
     });
   }
-  signin() {
+  signIn() {
     return __async(this, null, function* () {
       const { state, codeVerifier, codeChallenge } = yield generatePkceChallenge();
       localStorage.setItem("state", state);
@@ -277,6 +294,10 @@ var CodeFlow = class {
         state
       );
     });
+  }
+  signOut() {
+    this.service.clearTokens();
+    this.service.clearOptions();
   }
 };
 export {

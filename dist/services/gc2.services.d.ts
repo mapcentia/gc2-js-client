@@ -1,2 +1,2 @@
 import 'axios';
-export { G as Gc2Service } from '../gc2.services-BGKfkyyU.js';
+export { G as Gc2Service } from '../gc2.services-DbluwiMo.js';

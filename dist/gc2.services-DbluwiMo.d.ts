@@ -50,6 +50,8 @@ declare class Gc2Service {
     getAuthorizationCodeToken(code: string | string[], codeVerifier: string | null): Promise<GetTokenResponse>;
     getPasswordToken(username: string, password: string, database: string): Promise<GetTokenResponse>;
     getRefreshToken(token: string): Promise<GetTokenResponse>;
+    clearTokens(): void;
+    clearOptions(): void;
 }
 
 export { Gc2Service as G, type Options as O, type Tokens as T, isLogin as a, setOptions as b, getTokens as c, getOptions as d, generatePkceChallenge as g, isTokenExpired as i, passwordIsStrongEnough as p, setTokens as s };

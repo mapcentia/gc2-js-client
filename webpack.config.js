@@ -9,8 +9,8 @@ module.exports = {
     output: {
         libraryTarget: 'var',
         library: 'gc2',
-        path: path.resolve(__dirname, './build'),
-        filename: "gc2-js-client.js"
+        path: path.resolve(__dirname, './dist'),
+        filename: "gc2-js-client.min.js"
     },
     resolve: {
         extensions: [".ts", ".tsx", ".js"],

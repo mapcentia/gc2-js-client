@@ -1,4 +1,4 @@
-import { O as Options, G as Gc2Service } from './gc2.services-BGKfkyyU.js';
+import { O as Options, G as Gc2Service } from './gc2.services-DbluwiMo.js';
 import 'axios';
 
 declare class CodeFlow {
@@ -6,7 +6,8 @@ declare class CodeFlow {
     service: Gc2Service;
     constructor(options: Options);
     redirectHandle(): Promise<boolean | string>;
-    signin(): Promise<void>;
+    signIn(): Promise<void>;
+    signOut(): void;
 }
 
 export { CodeFlow as default };

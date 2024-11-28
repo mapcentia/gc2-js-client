@@ -184,6 +184,15 @@ var Gc2Service = class {
       });
     });
   }
+  clearTokens() {
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("refreshToken");
+  }
+  clearOptions() {
+    localStorage.removeItem("clientId");
+    localStorage.removeItem("host");
+    localStorage.removeItem("redirectUri");
+  }
 };
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
