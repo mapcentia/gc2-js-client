@@ -18,12 +18,12 @@ export default class CodeFlow {
         const queryString = querystring.parse(url)
 
         if (queryString.error) {
-            return Promise.reject(new Error(`Failed to redirect: ${url}`))
+            throw new Error(`Failed to redirect: ${url}`)
         }
 
         if (queryString.code) {
             if (queryString.state !== localStorage.getItem('state')) {
-                return Promise.reject('Possible CSRF attack. Aborting login!')
+                throw new Error('Possible CSRF attack. Aborting login!')
             }
             try {
                 const {
@@ -50,15 +50,10 @@ export default class CodeFlow {
                 return Promise.resolve(true)
 
             } catch (e: any) {
-                return Promise.reject(`Failed to redirect: ${url}`)
+                throw new Error(`Failed to redirect: ${url}`)
             }
         }
-        if (await isLogin(this.service)) {
-
-            return Promise.resolve(true)
-        }
-
-        return Promise.resolve(false)
+        return await isLogin(this.service);
     }
 
     public async signIn(): Promise<void> {
