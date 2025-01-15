@@ -1,33 +1,12 @@
 import axios, {AxiosError, AxiosInstance, AxiosRequestConfig} from 'axios'
 import * as querystring from 'querystring'
-import {Options} from "../util/utils";
-
-
-type GetDeviceCodeResponse = {
-    device_code: string;
-    user_code: string;
-    verification_uri: string;
-    verification_uri_complete?: string;
-    expires_in: number;
-    interval: number;
-};
-
-type GetTokenResponse = {
-    access_token: string;
-    expires_in: number;
-    refresh_expires_in: number;
-    refresh_token: string;
-    token_type: string;
-    'not-before-policy': number;
-    session_state: string;
-    scope: string;
-};
+import {Options, CodeFlowOptions, GetTokenResponse, GetDeviceCodeResponse} from "../util/utils";
 
 export class Gc2Service {
     http: AxiosInstance
-    options: Options
+    options: CodeFlowOptions
 
-    constructor(options: Options) {
+    constructor(options: CodeFlowOptions) {
         this.options = options
         this.http = axios.create({
             baseURL: this.options.host
@@ -86,8 +65,6 @@ export class Gc2Service {
                 }, interval * 1100) // interval equal to 1 is equivalent to 1.1 seconds between one request and another
             })
         }
-
-
         return response
     }
 
@@ -162,15 +139,5 @@ export class Gc2Service {
                 },
             ).then(({data}) => data).catch(err => {
             })
-    }
-
-    clearTokens(): void {
-        localStorage.removeItem('accessToken')
-        localStorage.removeItem('refreshToken')
-    }
-    clearOptions(): void {
-        localStorage.removeItem('clientId')
-        localStorage.removeItem('host')
-        localStorage.removeItem('redirectUri')
     }
 }

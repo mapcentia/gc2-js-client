@@ -1,6 +1,6 @@
 {
   "name": "@mapcentia/gc2-js-client",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "JS client for GC2 SQL API",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
@@ -10,13 +10,14 @@
     "build"
   ],
   "tsup": {
-    "entry": ["src"],
+    "entry": [
+      "src"
+    ],
     "splitting": false,
     "sourcemap": true,
     "clean": true,
     "dts": true,
     "minify": true
-
   },
   "scripts": {
     "dev": "webpack -w",

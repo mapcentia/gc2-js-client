@@ -1,10 +1,8 @@
 import CodeFlow from "./CodeFlow"
+import PasswordFlow from "./PasswordFlow"
 import Sql from "./Sql"
+import {Options, CodeFlowOptions} from "./util/utils"
 
-module.exports = {
-    CodeFlow, Sql
-};
-
-export {CodeFlow, Sql}
+export {CodeFlow, PasswordFlow, Sql, Options, CodeFlowOptions}
 
 

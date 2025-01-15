@@ -7,10 +7,34 @@ export type Tokens = {
 };
 
 export type Options = {
-    redirectUri: string,
-    clientId: string,
-    host: string,
+    host: string;
 }
+
+export type CodeFlowOptions = Options & {
+    redirectUri: string;
+    clientId: string;
+}
+
+export type GetDeviceCodeResponse = {
+    device_code: string;
+    user_code: string;
+    verification_uri: string;
+    verification_uri_complete?: string;
+    expires_in: number;
+    interval: number;
+};
+
+export type GetTokenResponse = {
+    access_token: string;
+    expires_in: number;
+    refresh_expires_in: number;
+    refresh_token: string;
+    token_type: string;
+    'not-before-policy': number;
+    session_state: string;
+    scope: string;
+};
+
 
 export const generatePkceChallenge = async () => {
 
@@ -26,7 +50,7 @@ export const generatePkceChallenge = async () => {
         return crypto.subtle.digest('SHA-256', data);
     }
 
-    const base64urlencode = (str: ArrayBuffer) => {
+    const base64urlEncode = (str: ArrayBuffer) => {
 
         return btoa(String.fromCharCode.apply(null, [...new Uint8Array(str)]))
             .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
@@ -34,7 +58,7 @@ export const generatePkceChallenge = async () => {
 
     async function pkceChallengeFromVerifier(v: string | undefined) {
         const hashed = await sha256(v);
-        return base64urlencode(hashed);
+        return base64urlEncode(hashed);
     }
 
     const {state, codeVerifier} = {
@@ -79,6 +103,8 @@ export const isLogin = async (gc2: Gc2Service): Promise<boolean> => {
     }
     if (!accessToken || (accessToken && isTokenExpired(accessToken))) {
         if (refreshToken && isTokenExpired(refreshToken)) {
+            clearTokens()
+            clearOptions()
             throw new Error('Refresh token has expired. Please login again.')
         }
         if (refreshToken) {
@@ -99,7 +125,7 @@ export const setTokens = (tokens: Tokens) => {
     localStorage.setItem('refreshToken', tokens.refreshToken)
 }
 
-export const setOptions = (options: Options ) => {
+export const setOptions = (options: CodeFlowOptions) => {
     if (options.clientId) localStorage.setItem('clientId', options.clientId)
     if (options.host) localStorage.setItem('host', options.host)
     if (options.redirectUri) localStorage.setItem('redirectUri', options.redirectUri)
@@ -111,12 +137,27 @@ export const getTokens = (): Tokens => {
         refreshToken: localStorage.getItem('refreshToken') || '',
     }
 }
-export const getOptions = (): Options => {
+export const getOptions = (): CodeFlowOptions => {
     return {
         clientId: localStorage.getItem('clientId') || '',
         host: localStorage.getItem('host') || '',
         redirectUri: localStorage.getItem('redirectUri') || '',
     }
+}
+
+export const base64UrlEncodeString = (str: string): string => {
+    return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+}
+
+export const clearTokens = (): void => {
+    localStorage.removeItem('accessToken')
+    localStorage.removeItem('refreshToken')
+}
+
+export const clearOptions = (): void => {
+    localStorage.removeItem('clientId')
+    localStorage.removeItem('host')
+    localStorage.removeItem('redirectUri')
 }
 
 

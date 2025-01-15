@@ -1,14 +1,14 @@
-import {Gc2Service,} from './services/gc2.services'
+import {Gc2Service} from './services/gc2.services'
 import {generatePkceChallenge, isLogin, setTokens, setOptions} from './util/utils'
 import querystring from "querystring";
-import {Options} from "./util/utils";
+import {CodeFlowOptions, clearTokens, clearOptions} from "./util/utils";
 
 
 export default class CodeFlow {
-    options: Options
+    options: CodeFlowOptions
     service: Gc2Service
 
-    constructor(options: Options) {
+    constructor(options: CodeFlowOptions) {
         this.options = options
         this.service = new Gc2Service(options)
     }
@@ -68,7 +68,7 @@ export default class CodeFlow {
     }
 
     public signOut(): void {
-        this.service.clearTokens()
-        this.service.clearOptions()
+        clearTokens()
+        clearOptions()
     }
 }
