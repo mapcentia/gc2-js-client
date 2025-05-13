@@ -15,7 +15,7 @@ export class Gc2Service {
 
     async getDeviceCode(): Promise<GetDeviceCodeResponse> {
         const {data} = await this.http.post(
-            `/api/v4/oauth/device`,
+            this.options.deviceUri ? this.options.deviceUri : `/api/v4/oauth/device`,
             {
                 client_id: this.options.clientId,
             },
@@ -32,7 +32,7 @@ export class Gc2Service {
         const getToken = () =>
             this.http
                 .post(
-                    '/api/v4/oauth',
+                    this.options.tokenUri ? this.options.tokenUri : `/api/v4/oauth`,
                     {
                         client_id: this.options.clientId,
                         device_code: deviceCode,
@@ -74,16 +74,19 @@ export class Gc2Service {
             client_id: this.options.clientId,
             redirect_uri: this.options.redirectUri,
             state,
+            nonce: state, // For OpenID token
             code_challenge: codeChallenge,
             code_challenge_method: 'S256',
+            scope: this.options.scope,
+
         })
-        return `${this.options.host}/auth/?${queryParams}`
+        return (this.options.authUri ? this.options.authUri : `${this.options.host}/auth/`) + '?' + queryParams
     }
 
     async getAuthorizationCodeToken(code: string | string[], codeVerifier: string | null): Promise<GetTokenResponse> {
         return this.http
             .post(
-                `/api/v4/oauth`,
+                this.options.tokenUri ? this.options.tokenUri : `/api/v4/oauth`,
                 {
                     client_id: this.options.clientId,
                     redirect_uri: this.options.redirectUri,
@@ -93,7 +96,9 @@ export class Gc2Service {
                 },
                 {
                     headers: {
-                        'Content-Type': 'application/json',
+                        // We use x-www-form-urlencoded
+                        // GC2 also accepts JSON
+                        'Content-Type': 'application/x-www-form-urlencoded',
                     },
                 },
             )
@@ -126,7 +131,7 @@ export class Gc2Service {
     async getRefreshToken(token: string): Promise<GetTokenResponse> {
         return this.http
             .post(
-                `/api/v4/oauth`,
+                this.options.tokenUri ? this.options.tokenUri : `/api/v4/oauth`,
                 {
                     client_id: this.options.clientId,
                     grant_type: 'refresh_token',

@@ -13,6 +13,7 @@ export type Options = {
     tokenUri?: string;
     authUri?: string;
     deviceUri?: string;
+    scope?: string;
 }
 
 export type CodeFlowOptions = Options & {
