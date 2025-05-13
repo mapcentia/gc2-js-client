@@ -1,5 +1,6 @@
 import {jwtDecode} from 'jwt-decode'
 import {Gc2Service} from "../services/gc2.services";
+import * as util from "node:util";
 
 export type Tokens = {
     accessToken: string;
@@ -9,6 +10,9 @@ export type Tokens = {
 
 export type Options = {
     host: string;
+    tokenUri?: string;
+    authUri?: string;
+    deviceUri?: string;
 }
 
 export type CodeFlowOptions = Options & {
@@ -98,8 +102,7 @@ export const passwordIsStrongEnough = (password: string, allowNull: boolean = fa
 }
 
 export const isLogin = async (gc2: Gc2Service): Promise<boolean> => {
-    const accessToken = localStorage.getItem('accessToken')
-    const refreshToken = localStorage.getItem('refreshToken')
+    const {accessToken, refreshToken} = getTokens()
     if (!accessToken && !refreshToken) {
         return false
     }
@@ -123,29 +126,42 @@ export const isLogin = async (gc2: Gc2Service): Promise<boolean> => {
 }
 
 export const setTokens = (tokens: Tokens) => {
-    localStorage.setItem('accessToken', tokens.accessToken)
-    localStorage.setItem('refreshToken', tokens.refreshToken)
-    localStorage.setItem('idToken', tokens?.idToken || '')
-}
-
-export const setOptions = (options: CodeFlowOptions) => {
-    if (options.clientId) localStorage.setItem('clientId', options.clientId)
-    if (options.host) localStorage.setItem('host', options.host)
-    if (options.redirectUri) localStorage.setItem('redirectUri', options.redirectUri)
+    localStorage.setItem('gc2_tokens', JSON.stringify({
+                'accessToken': tokens.accessToken,
+                'refreshToken': tokens.refreshToken,
+                'idToken': tokens?.idToken || ''
+            }
+        )
+    )
 }
 
 export const getTokens = (): Tokens => {
+    const str: string | null = localStorage.getItem('gc2_tokens')
+    const tokens: any = str ? JSON.parse(str) : {}
     return {
-        accessToken: localStorage.getItem('accessToken') || '',
-        refreshToken: localStorage.getItem('refreshToken') || '',
-        idToken: localStorage.getItem('idToken') || '',
+        accessToken: tokens?.accessToken || '',
+        refreshToken: tokens?.refreshToken || '',
+        idToken: tokens?.idToken || '',
     }
 }
+
+export const setOptions = (options: CodeFlowOptions) => {
+    localStorage.setItem('gc2_options', JSON.stringify({
+                'clientId': options.clientId,
+                'host': options.host,
+                'redirectUri': options.redirectUri
+            }
+        )
+    )
+}
+
 export const getOptions = (): CodeFlowOptions => {
+    const str: string | null = localStorage.getItem('gc2_options')
+    const options: any = str ? JSON.parse(str) : {}
     return {
-        clientId: localStorage.getItem('clientId') || '',
-        host: localStorage.getItem('host') || '',
-        redirectUri: localStorage.getItem('redirectUri') || '',
+        clientId: options?.clientId || '',
+        host: options?.host || '',
+        redirectUri: options?.redirectUri || '',
     }
 }
 
@@ -157,14 +173,11 @@ export const base64UrlEncodeString = (str: string): string => {
 }
 
 export const clearTokens = (): void => {
-    localStorage.removeItem('accessToken')
-    localStorage.removeItem('refreshToken')
+    localStorage.removeItem('gc2_tokens')
 }
 
 export const clearOptions = (): void => {
-    localStorage.removeItem('clientId')
-    localStorage.removeItem('host')
-    localStorage.removeItem('redirectUri')
+    localStorage.removeItem('gc2_options')
 }
 
 
