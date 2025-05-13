@@ -8,16 +8,6 @@
     "dist",
     "build"
   ],
-  "tsup": {
-    "entry": [
-      "src"
-    ],
-    "splitting": false,
-    "sourcemap": true,
-    "clean": true,
-    "dts": true,
-    "minify": true
-  },
   "scripts": {
     "dev": "webpack -w",
     "build": "tsup"

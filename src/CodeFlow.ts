@@ -13,7 +13,7 @@ export default class CodeFlow {
         this.service = new Gc2Service(options)
     }
 
-    public async redirectHandle(): Promise<boolean | string> {
+    public async redirectHandle(): Promise<boolean> {
         const url = window.location.search.substring(1)
         const queryString = querystring.parse(url)
 
@@ -28,9 +28,10 @@ export default class CodeFlow {
             try {
                 const {
                     access_token,
-                    refresh_token
+                    refresh_token,
+                    id_token,
                 } = await this.service.getAuthorizationCodeToken(queryString.code, localStorage.getItem('codeVerifier'))
-                setTokens({accessToken: access_token, refreshToken: refresh_token})
+                setTokens({accessToken: access_token, refreshToken: refresh_token, idToken: id_token})
                 setOptions({
                     clientId: this.options.clientId,
                     host: this.options.host,
@@ -50,7 +51,7 @@ export default class CodeFlow {
                 return Promise.resolve(true)
 
             } catch (e: any) {
-                throw new Error(`Failed to redirect: ${url}`)
+                throw new Error(e.message)
             }
         }
         return await isLogin(this.service);

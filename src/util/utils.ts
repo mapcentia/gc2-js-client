@@ -4,6 +4,7 @@ import {Gc2Service} from "../services/gc2.services";
 export type Tokens = {
     accessToken: string;
     refreshToken: string;
+    idToken?: string;
 };
 
 export type Options = {
@@ -29,6 +30,7 @@ export type GetTokenResponse = {
     expires_in: number;
     refresh_expires_in: number;
     refresh_token: string;
+    id_token?: string;
     token_type: string;
     'not-before-policy': number;
     session_state: string;
@@ -110,7 +112,7 @@ export const isLogin = async (gc2: Gc2Service): Promise<boolean> => {
         if (refreshToken) {
             try {
                 const data = await gc2.getRefreshToken(refreshToken)
-                setTokens({accessToken: data.access_token, refreshToken})
+                setTokens({accessToken: data.access_token, refreshToken, idToken: data?.id_token})
                 console.log('Access token refreshed')
             } catch (e) {
                 throw new Error('Could not get refresh token.')
@@ -123,6 +125,7 @@ export const isLogin = async (gc2: Gc2Service): Promise<boolean> => {
 export const setTokens = (tokens: Tokens) => {
     localStorage.setItem('accessToken', tokens.accessToken)
     localStorage.setItem('refreshToken', tokens.refreshToken)
+    localStorage.setItem('idToken', tokens?.idToken || '')
 }
 
 export const setOptions = (options: CodeFlowOptions) => {
@@ -135,6 +138,7 @@ export const getTokens = (): Tokens => {
     return {
         accessToken: localStorage.getItem('accessToken') || '',
         refreshToken: localStorage.getItem('refreshToken') || '',
+        idToken: localStorage.getItem('idToken') || '',
     }
 }
 export const getOptions = (): CodeFlowOptions => {
@@ -146,7 +150,10 @@ export const getOptions = (): CodeFlowOptions => {
 }
 
 export const base64UrlEncodeString = (str: string): string => {
-    return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+    return btoa(new TextEncoder().encode(str).reduce((acc, byte) => acc + String.fromCharCode(byte), ''))
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=+$/, '');
 }
 
 export const clearTokens = (): void => {

@@ -8,10 +8,7 @@ const get = async (response: Response, expectedCode: number, doNotExit: boolean 
     if (res === null) {
       res = await response.json()
     }
-    // ux.log('⚠️ ' + chalk.red(res.message || res.error))
-    // if (!doNotExit) {
-    //   exit(1)
-    // }
+    throw new Error(res.message || res.error)
   }
   return res
 }
