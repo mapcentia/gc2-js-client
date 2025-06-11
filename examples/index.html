@@ -33,25 +33,44 @@
         crossorigin="anonymous"></script>
 <script>
     const codeFlow = new gc2.CodeFlow({
-        redirectUri: 'http://127.0.0.1:8000/examples/',
-        clientId: '678784c6cd40a',
-        host: 'http://127.0.0.1:8080'
+        redirectUri: 'http://localhost:8000/examples/',
+        clientId: '81ed11e6-4e76-4c22-bb55-739238ddbe5f',
+        host: 'http://127.0.0.1:8080',
+        tokenUri: 'https://login.microsoftonline.com/9fc91e5b-27ae-4660-b4fb-2c590c2e40fd/oauth2/v2.0/token',
+        authUri: 'https://login.microsoftonline.com/9fc91e5b-27ae-4660-b4fb-2c590c2e40fd/oauth2/v2.0/authorize',
+        scope: 'openid'
+
     })
     codeFlow.redirectHandle().then(isSignedIn => {
         if (isSignedIn) {
-            const sql = new gc2.Sql()
-            sql.select('select 1').then(data => {
-                console.log(data)
-            }).catch(e => alert(e))
+            // const sql = new gc2.Sql()
+            // sql.select('select 1').then(data => {
+            //     console.log(data)
+            // }).catch(e => alert(e))
             document.querySelector('#login-btn').style.display = 'none'
             document.querySelector('#logout-btn').style.display = 'inline'
+
+            fetch('http://localhost:8080/api/v2/session/nonce').then(res => res.json()).then(data => {
+                const nonce = data.nonce
+                const token = JSON.parse(localStorage.getItem('gc2_tokens'))['idToken']
+                fetch('http://localhost:8080/api/v2/session/token', {
+                    method: 'POST',
+                    headers: {
+                        "Content-Type": "application/json;charset=UTF-8",
+                    },
+                    body: JSON.stringify({nonce, token}),
+                }).then(res => res.json()).then(data => {
+                    console.log(data)
+                })
+            })
+
         } else {
             document.querySelector('#login-btn').style.display = 'inline'
             document.querySelector('#logout-btn').style.display = 'none'
         }
     }).catch(err => {
-        alert(err)
-        location.reload()
+        // alert(err)
+        // location.reload()
     })
 </script>
 </body>

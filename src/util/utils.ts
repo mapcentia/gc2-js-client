@@ -1,6 +1,5 @@
 import {jwtDecode} from 'jwt-decode'
 import {Gc2Service} from "../services/gc2.services";
-import * as util from "node:util";
 
 export type Tokens = {
     accessToken: string;
@@ -90,6 +89,10 @@ export const isTokenExpired = (token: string): boolean => {
         if (currentTime > exp) isJwtExpired = true
     }
     return isJwtExpired
+}
+
+export const claims = (token: string): any => {
+    return jwtDecode(token)
 }
 
 export const passwordIsStrongEnough = (password: string, allowNull: boolean = false) => {

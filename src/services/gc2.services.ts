@@ -2,8 +2,8 @@ import * as querystring from 'querystring';
 import {CodeFlowOptions, GetTokenResponse, GetDeviceCodeResponse} from '../util/utils';
 
 export class Gc2Service {
-    private options: CodeFlowOptions;
-    private host: string;
+    private readonly options: CodeFlowOptions;
+    private readonly host: string;
 
     constructor(options: CodeFlowOptions) {
         this.options = options;
@@ -152,5 +152,13 @@ export class Gc2Service {
                 refresh_token: token,
             }
         );
+    }
+
+    getSignOutURL(): string {
+        const base = `${this.host}/signout/`;
+        const qs = querystring.stringify({
+            redirect_url: this.options.redirectUri,
+        });
+        return `${base}?${qs}`;
     }
 }

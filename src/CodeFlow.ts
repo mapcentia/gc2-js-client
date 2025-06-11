@@ -71,5 +71,7 @@ export default class CodeFlow {
     public signOut(): void {
         clearTokens()
         clearOptions()
+        // @ts-ignore
+        window.location = this.service.getSignOutURL();
     }
 }

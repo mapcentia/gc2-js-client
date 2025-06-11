@@ -5,4 +5,8 @@ export default class Status {
         const tokens = getTokens()
         return !(!tokens.accessToken && !tokens.refreshToken);
     }
+
+    getTokens() {
+        return getTokens()
+    }
 }
