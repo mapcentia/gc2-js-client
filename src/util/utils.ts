@@ -9,6 +9,7 @@ export type Tokens = {
 
 export type Options = {
     host: string;
+    wsHost?: string;
     tokenUri?: string;
     authUri?: string;
     deviceUri?: string;
@@ -18,6 +19,11 @@ export type Options = {
 export type CodeFlowOptions = Options & {
     redirectUri: string;
     clientId: string;
+}
+
+export type WsOptions = {
+    host: string;
+    callBack?: any;
 }
 
 export type GetDeviceCodeResponse = {
