@@ -6,8 +6,9 @@ import Status from "./Status"
 import Claims from "./Claims"
 import Users from "./Users"
 import Ws from "./Ws"
+import {Rpc, RpcRequest, RpcResponse} from "./Rpc"
 import {Options, CodeFlowOptions} from "./util/utils"
 
-export {CodeFlow, PasswordFlow, Sql, Meta, Options, CodeFlowOptions, Status, Claims, Users, Ws}
+export {CodeFlow, PasswordFlow, Sql, Rpc, RpcRequest, RpcResponse, Meta, Options, CodeFlowOptions, Status, Claims, Users, Ws}
 
 
