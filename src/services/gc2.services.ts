@@ -1,4 +1,3 @@
-import * as querystring from 'querystring';
 import {CodeFlowOptions, GetTokenResponse, GetDeviceCodeResponse} from '../util/utils';
 
 export class Gc2Service {
@@ -29,7 +28,7 @@ export class Gc2Service {
         if (contentType === 'application/json') {
             payload = JSON.stringify(body);
         } else {
-            payload = querystring.stringify(body);
+            payload = new URLSearchParams(body).toString();
         }
 
         const response = await fetch(url, {
@@ -90,17 +89,20 @@ export class Gc2Service {
 
     getAuthorizationCodeURL(codeChallenge: string, state: string): string {
         const base = this.options.authUri ?? `${this.host}/auth/`;
-        const qs = querystring.stringify({
-            response_type: 'code',
-            client_id: this.options.clientId,
-            redirect_uri: this.options.redirectUri,
-            state,
-            nonce: state,
-            code_challenge: codeChallenge,
-            code_challenge_method: 'S256',
-            scope: this.options.scope,
-        });
-        return `${base}?${qs}`;
+        const params = new URLSearchParams();
+        // Add parameters conditionally
+        params.set('response_type', 'code');
+        params.set('client_id', this.options.clientId);
+        params.set('redirect_uri', this.options.redirectUri);
+        params.set('state', state);
+        params.set('nonce', state);
+        params.set('code_challenge', codeChallenge);
+        params.set('code_challenge_method', 'S256');
+        // Only add scope if it's defined
+        if (this.options.scope) {
+            params.set('scope', this.options.scope);
+        }
+        return `${base}?${params.toString()}`;
     }
 
     async getAuthorizationCodeToken(
@@ -156,9 +158,9 @@ export class Gc2Service {
 
     getSignOutURL(): string {
         const base = `${this.host}/signout/`;
-        const qs = querystring.stringify({
+        const params = new URLSearchParams({
             redirect_url: this.options.redirectUri,
         });
-        return `${base}?${qs}`;
+        return `${base}?${params.toString()}`;
     }
 }

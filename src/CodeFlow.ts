@@ -1,8 +1,7 @@
+
 import {Gc2Service} from './services/gc2.services'
 import {generatePkceChallenge, isLogin, setTokens, setOptions} from './util/utils'
-import querystring from "querystring";
 import {CodeFlowOptions, clearTokens, clearOptions} from "./util/utils";
-
 
 export default class CodeFlow {
     options: CodeFlowOptions
@@ -14,15 +13,18 @@ export default class CodeFlow {
     }
 
     public async redirectHandle(): Promise<boolean> {
-        const url = window.location.search.substring(1)
-        const queryString = querystring.parse(url)
+        const url: string = window.location.search
+        const queryParams = new URLSearchParams(url)
 
-        if (queryString.error) {
+        const error = queryParams.get('error')
+        if (error) {
             throw new Error(`Failed to redirect: ${url}`)
         }
 
-        if (queryString.code) {
-            if (queryString.state !== localStorage.getItem('state')) {
+        const code = queryParams.get('code')
+        if (code) {
+            const state = queryParams.get('state')
+            if (state !== localStorage.getItem('state')) {
                 throw new Error('Possible CSRF attack. Aborting login!')
             }
             try {
@@ -30,7 +32,7 @@ export default class CodeFlow {
                     access_token,
                     refresh_token,
                     id_token,
-                } = await this.service.getAuthorizationCodeToken(queryString.code, localStorage.getItem('codeVerifier'))
+                } = await this.service.getAuthorizationCodeToken(code, localStorage.getItem('codeVerifier'))
                 setTokens({accessToken: access_token, refreshToken: refresh_token, idToken: id_token})
                 setOptions({
                     clientId: this.options.clientId,
@@ -45,7 +47,7 @@ export default class CodeFlow {
                 params.delete('code')
                 params.delete('state')
                 const loc = window.location
-                const newUrl = loc.origin + loc.pathname + (params.size > 1 ? '?' + params.toString() : '')
+                const newUrl = loc.origin + loc.pathname + (params.size > 0 ? '?' + params.toString() : '')
                 history.pushState(null, '', newUrl);
 
                 return Promise.resolve(true)

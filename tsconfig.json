@@ -3,7 +3,7 @@
     "target": "es6",
     //"module": "esnext",
     "module": "commonjs",
-    "lib": ["es5", "es6", "dom"],
+    "lib": ["es2016", "dom"],
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "strict": true,
