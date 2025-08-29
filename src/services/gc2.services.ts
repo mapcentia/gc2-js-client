@@ -97,7 +97,6 @@ export class Gc2Service {
         params.set('client_id', this.options.clientId);
         params.set('redirect_uri', this.options.redirectUri);
         params.set('state', state);
-        params.set('nonce', state);
         params.set('code_challenge', codeChallenge);
         params.set('code_challenge_method', 'S256');
         if (nonce) {
