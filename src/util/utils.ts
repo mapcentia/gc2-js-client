@@ -135,7 +135,7 @@ export const isLogin = async (gc2: Gc2Service): Promise<boolean> => {
     return true
 }
 
-export const setTokens = (tokens: Tokens) => {
+export const setTokens = (tokens: Tokens): void => {
     localStorage.setItem('gc2_tokens', JSON.stringify({
                 'accessToken': tokens.accessToken,
                 'refreshToken': tokens.refreshToken,
@@ -155,7 +155,7 @@ export const getTokens = (): Tokens => {
     }
 }
 
-export const setOptions = (options: CodeFlowOptions) => {
+export const setOptions = (options: CodeFlowOptions): void => {
     localStorage.setItem('gc2_options', JSON.stringify({
                 'clientId': options.clientId,
                 'host': options.host,
@@ -190,4 +190,7 @@ export const clearOptions = (): void => {
     localStorage.removeItem('gc2_options')
 }
 
+export const getNonce = (): string|null => {
+    return <string>localStorage.getItem('gc2_nonce')
+}
 

@@ -6,7 +6,8 @@ import Status from "./Status"
 import Claims from "./Claims"
 import Users from "./Users"
 import Ws from "./Ws"
-import Stat from "./Stat"
+import Stats from "./Stats"
+import Tables from "./Tables"
 import {Method, RpcRequest, RpcResponse} from "./Method"
 import {Options, CodeFlowOptions} from "./util/utils"
 
@@ -24,7 +25,8 @@ export {
     Claims,
     Users,
     Ws,
-    Stat
+    Stats,
+    Tables
 }
 
 

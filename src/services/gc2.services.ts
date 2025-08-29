@@ -1,4 +1,4 @@
-import {CodeFlowOptions, GetTokenResponse, GetDeviceCodeResponse} from '../util/utils';
+import {CodeFlowOptions, GetTokenResponse, GetDeviceCodeResponse, getNonce} from '../util/utils';
 
 export class Gc2Service {
     private readonly options: CodeFlowOptions;
@@ -89,7 +89,9 @@ export class Gc2Service {
 
     getAuthorizationCodeURL(codeChallenge: string, state: string): string {
         const base = this.options.authUri ?? `${this.host}/auth/`;
-        const params = new URLSearchParams();
+        const params = new URLSearchParams()
+        // Get nonce from local storage if it exists
+        const nonce = getNonce()
         // Add parameters conditionally
         params.set('response_type', 'code');
         params.set('client_id', this.options.clientId);
@@ -98,6 +100,9 @@ export class Gc2Service {
         params.set('nonce', state);
         params.set('code_challenge', codeChallenge);
         params.set('code_challenge_method', 'S256');
+        if (nonce) {
+            params.set('nonce', nonce);
+        }
         // Only add scope if it's defined
         if (this.options.scope) {
             params.set('scope', this.options.scope);
