@@ -1,6 +1,6 @@
 {
   "name": "@mapcentia/gc2-js-client",
-  "version": "0.0.15",
+  "version": "0.0.19",
   "description": "JS client for GC2 SQL API",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

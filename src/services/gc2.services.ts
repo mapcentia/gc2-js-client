@@ -161,10 +161,9 @@ export class Gc2Service {
     }
 
     getSignOutURL(): string {
-        const base = `${this.host}/signout/`;
         const params = new URLSearchParams({
-            redirect_url: this.options.redirectUri,
+            redirect_uri: this.options.redirectUri,
         });
-        return `${base}?${params.toString()}`;
+        return this.options.logoutUri ?? `/signout?${params.toString()}`;
     }
 }

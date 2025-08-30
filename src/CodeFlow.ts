@@ -1,6 +1,6 @@
 
 import {Gc2Service} from './services/gc2.services'
-import {generatePkceChallenge, isLogin, setTokens, setOptions} from './util/utils'
+import {generatePkceChallenge, isLogin, setTokens, setOptions, clearNonce} from './util/utils'
 import {CodeFlowOptions, clearTokens, clearOptions} from "./util/utils";
 
 export default class CodeFlow {
@@ -71,9 +71,14 @@ export default class CodeFlow {
     }
 
     public signOut(): void {
-        clearTokens()
-        clearOptions()
+        this.clear()
         // @ts-ignore
         window.location = this.service.getSignOutURL();
+    }
+
+    public clear(): void {
+        clearTokens()
+        clearOptions()
+        clearNonce()
     }
 }

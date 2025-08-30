@@ -12,6 +12,7 @@ export type Options = {
     wsHost?: string;
     tokenUri?: string;
     authUri?: string;
+    logoutUri?: string;
     deviceUri?: string;
     scope?: string;
 }
@@ -192,5 +193,8 @@ export const clearOptions = (): void => {
 
 export const getNonce = (): string|null => {
     return <string>localStorage.getItem('gc2_nonce')
+}
+export const clearNonce = (): void => {
+    localStorage.removeItem('gc2_nonce')
 }
 
