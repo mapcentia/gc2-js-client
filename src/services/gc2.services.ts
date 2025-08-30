@@ -46,14 +46,14 @@ export class Gc2Service {
     }
 
     async getDeviceCode(): Promise<GetDeviceCodeResponse> {
-        const path = this.options.deviceUri ?? '/api/v4/oauth/device';
+        const path = this.options.deviceUri ?? `${this.host}/api/v4/oauth/device`;
         return this.request(this.buildUrl(path), 'POST', {
             client_id: this.options.clientId,
         });
     }
 
     async pollToken(deviceCode: string, interval: number): Promise<GetTokenResponse> {
-        const path = this.options.tokenUri ?? '/api/v4/oauth';
+        const path = this.options.tokenUri ?? `${this.host}/api/v4/oauth`;
         const getToken = async (): Promise<GetTokenResponse | null | string> => {
             try {
                 return await this.request(
@@ -113,7 +113,7 @@ export class Gc2Service {
         code: string | string[],
         codeVerifier: string | null
     ): Promise<GetTokenResponse> {
-        const path = this.options.tokenUri ?? '/api/v4/oauth';
+        const path = this.options.tokenUri ?? `${this.host}/api/v4/oauth`;
         return this.request(
             this.buildUrl(path),
             'POST',
@@ -133,7 +133,7 @@ export class Gc2Service {
         password: string,
         database: string
     ): Promise<GetTokenResponse> {
-        const path = '/api/v3/oauth/token';
+        const path = `${this.host}/api/v3/oauth/token`;
         return this.request(
             this.buildUrl(path),
             'POST',
@@ -148,7 +148,7 @@ export class Gc2Service {
     }
 
     async getRefreshToken(token: string): Promise<GetTokenResponse> {
-        const path = this.options.tokenUri ?? '/api/v4/oauth';
+        const path = this.options.tokenUri ?? `${this.host}/api/v4/oauth`;
         return this.request(
             this.buildUrl(path),
             'POST',
@@ -164,6 +164,6 @@ export class Gc2Service {
         const params = new URLSearchParams({
             redirect_uri: this.options.redirectUri,
         });
-        return this.options.logoutUri ?? `/signout?${params.toString()}`;
+        return this.options.logoutUri ?? `${this.host}/signout?${params.toString()}`;
     }
 }
