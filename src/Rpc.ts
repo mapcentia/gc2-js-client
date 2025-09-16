@@ -17,9 +17,9 @@ export type RpcResponse = {
     id: number|string
 }
 
-export class Method {
+export class Rpc {
     async call(request: RpcRequest): Promise<RpcResponse> {
-        const response = await make('4', `method`, 'POST', request)
+        const response = await make('4', `call`, 'POST', request)
         return get(response, 200)
     }
 }

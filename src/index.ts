@@ -8,14 +8,14 @@ import Users from "./Users"
 import Ws from "./Ws"
 import Stats from "./Stats"
 import Tables from "./Tables"
-import {Method, RpcRequest, RpcResponse} from "./Method"
+import {Rpc, RpcRequest, RpcResponse} from "./Rpc"
 import {Options, CodeFlowOptions} from "./util/utils"
 
 export {
     CodeFlow,
     PasswordFlow,
     Sql,
-    Method,
+    Rpc,
     RpcRequest,
     RpcResponse,
     Meta,
