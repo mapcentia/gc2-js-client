@@ -35,7 +35,7 @@
                 </div>
                 <div class="col-sm-4">
                     <label class="form-label">Redirect URI</label>
-                    <input id="redirectUri" class="form-control" value="http://localhost:8000/examples/"/>
+                    <input id="redirectUri" class="form-control" value="http://localhost:63342/gc2-js-client/examples/index.html"/>
                 </div>
             </div>
             <div class="mt-3">
@@ -85,6 +85,7 @@
     // Initialize CodeFlow using inputs so users can adapt config
     let codeFlow;
     let tablesApi;
+
 
     const $ = (sel) => document.querySelector(sel);
     const setAuthUI = (signedIn) => {
