@@ -1,5 +1,6 @@
 import {jwtDecode} from 'jwt-decode'
 import {Gc2Service} from "../services/gc2.services";
+import {getStorage} from './storage'
 
 export type Tokens = {
     accessToken: string;
@@ -15,11 +16,17 @@ export type Options = {
     logoutUri?: string;
     deviceUri?: string;
     scope?: string;
+    clientId: string;
 }
 
 export type CodeFlowOptions = Options & {
     redirectUri: string;
-    clientId: string;
+}
+
+export type PasswordFlowOptions = Options & {
+    username: string;
+    password: string;
+    database: string;
 }
 
 export type WsOptions = {
@@ -137,7 +144,7 @@ export const isLogin = async (gc2: Gc2Service): Promise<boolean> => {
 }
 
 export const setTokens = (tokens: Tokens): void => {
-    localStorage.setItem('gc2_tokens', JSON.stringify({
+    getStorage().setItem('gc2_tokens', JSON.stringify({
                 'accessToken': tokens.accessToken,
                 'refreshToken': tokens.refreshToken,
                 'idToken': tokens?.idToken || ''
@@ -147,7 +154,7 @@ export const setTokens = (tokens: Tokens): void => {
 }
 
 export const getTokens = (): Tokens => {
-    const str: string | null = localStorage.getItem('gc2_tokens')
+    const str: string | null = getStorage().getItem('gc2_tokens')
     const tokens: any = str ? JSON.parse(str) : {}
     return {
         accessToken: tokens?.accessToken || '',
@@ -157,7 +164,7 @@ export const getTokens = (): Tokens => {
 }
 
 export const setOptions = (options: CodeFlowOptions): void => {
-    localStorage.setItem('gc2_options', JSON.stringify({
+    getStorage().setItem('gc2_options', JSON.stringify({
                 'clientId': options.clientId,
                 'host': options.host,
                 'redirectUri': options.redirectUri
@@ -167,7 +174,7 @@ export const setOptions = (options: CodeFlowOptions): void => {
 }
 
 export const getOptions = (): CodeFlowOptions => {
-    const str: string | null = localStorage.getItem('gc2_options')
+    const str: string | null = getStorage().getItem('gc2_options')
     const options: any = str ? JSON.parse(str) : {}
     return {
         clientId: options?.clientId || '',
@@ -184,17 +191,17 @@ export const base64UrlEncodeString = (str: string): string => {
 }
 
 export const clearTokens = (): void => {
-    localStorage.removeItem('gc2_tokens')
+    getStorage().removeItem('gc2_tokens')
 }
 
 export const clearOptions = (): void => {
-    localStorage.removeItem('gc2_options')
+    getStorage().removeItem('gc2_options')
 }
 
 export const getNonce = (): string|null => {
-    return <string>localStorage.getItem('gc2_nonce')
+    return <string>getStorage().getItem('gc2_nonce')
 }
 export const clearNonce = (): void => {
-    localStorage.removeItem('gc2_nonce')
+    getStorage().removeItem('gc2_nonce')
 }
 

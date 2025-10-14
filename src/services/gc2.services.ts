@@ -1,12 +1,20 @@
-import {CodeFlowOptions, GetTokenResponse, GetDeviceCodeResponse, getNonce} from '../util/utils';
+import {CodeFlowOptions, GetDeviceCodeResponse, getNonce, GetTokenResponse, PasswordFlowOptions} from '../util/utils';
 
 export class Gc2Service {
-    private readonly options: CodeFlowOptions;
+    private readonly options: CodeFlowOptions | PasswordFlowOptions;
     private readonly host: string;
 
-    constructor(options: CodeFlowOptions) {
+    constructor(options: CodeFlowOptions | PasswordFlowOptions) {
         this.options = options;
         this.host = options.host;
+    }
+
+    // Type guards to check if options is CodeFlowOptions or PasswordFlowOptions
+    private isCodeFlowOptions(options: CodeFlowOptions | PasswordFlowOptions): options is CodeFlowOptions {
+        return 'redirectUri' in options;
+    }
+    private isPasswordFlowOptions(options: CodeFlowOptions | PasswordFlowOptions): options is PasswordFlowOptions {
+        return 'username' in options;
     }
 
     private buildUrl(path: string): string {
@@ -88,14 +96,20 @@ export class Gc2Service {
     }
 
     getAuthorizationCodeURL(codeChallenge: string, state: string): string {
-        const base = this.options.authUri ?? `${this.host}/auth/`;
+        let redirectUri: string
+        if (this.isCodeFlowOptions(this.options)) {
+             redirectUri = this.options.redirectUri
+        } else {
+            throw new Error('CodeFlow options required for this operation')
+        }
+        const base = this.options.authUri ?? `${this.host}/auth/`
         const params = new URLSearchParams()
         // Get nonce from local storage if it exists
         const nonce = getNonce()
         // Add parameters conditionally
         params.set('response_type', 'code');
         params.set('client_id', this.options.clientId);
-        params.set('redirect_uri', this.options.redirectUri);
+        params.set('redirect_uri', redirectUri);
         params.set('state', state);
         params.set('code_challenge', codeChallenge);
         params.set('code_challenge_method', 'S256');
@@ -113,13 +127,19 @@ export class Gc2Service {
         code: string | string[],
         codeVerifier: string | null
     ): Promise<GetTokenResponse> {
+        let redirectUri: string
+        if (this.isCodeFlowOptions(this.options)) {
+            redirectUri = this.options.redirectUri
+        } else {
+            throw new Error('CodeFlow options required for this operation')
+        }
         const path = this.options.tokenUri ?? `${this.host}/api/v4/oauth`;
         return this.request(
             this.buildUrl(path),
             'POST',
             {
                 client_id: this.options.clientId,
-                redirect_uri: this.options.redirectUri,
+                redirect_uri: redirectUri,
                 grant_type: 'authorization_code',
                 code,
                 code_verifier: codeVerifier,
@@ -128,12 +148,16 @@ export class Gc2Service {
         );
     }
 
-    async getPasswordToken(
-        username: string,
-        password: string,
-        database: string
-    ): Promise<GetTokenResponse> {
-        const path = `${this.host}/api/v3/oauth/token`;
+    async getPasswordToken(): Promise<GetTokenResponse> {
+        let username, password, database
+        if (this.isPasswordFlowOptions(this.options)) {
+            username = this.options.username
+            password = this.options.password
+            database = this.options.database
+        } else {
+            throw new Error('PasswordFlow options required for this operation')
+        }
+        const path = `${this.host}/api/v4/oauth`;
         return this.request(
             this.buildUrl(path),
             'POST',
@@ -161,8 +185,14 @@ export class Gc2Service {
     }
 
     getSignOutURL(): string {
+        let redirectUri: string
+        if (this.isCodeFlowOptions(this.options)) {
+            redirectUri = this.options.redirectUri
+        } else {
+            throw new Error('CodeFlow options required for this operation')
+        }
         const params = new URLSearchParams({
-            redirect_uri: this.options.redirectUri,
+            redirect_uri: redirectUri,
         });
         return this.options.logoutUri ?? `${this.host}/signout?${params.toString()}`;
     }

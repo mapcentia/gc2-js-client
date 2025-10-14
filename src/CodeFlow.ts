@@ -1,7 +1,7 @@
-
 import {Gc2Service} from './services/gc2.services'
 import {generatePkceChallenge, isLogin, setTokens, setOptions, clearNonce} from './util/utils'
 import {CodeFlowOptions, clearTokens, clearOptions} from "./util/utils";
+import {getStorage} from './util/storage'
 
 export default class CodeFlow {
     options: CodeFlowOptions
@@ -24,7 +24,7 @@ export default class CodeFlow {
         const code = queryParams.get('code')
         if (code) {
             const state = queryParams.get('state')
-            if (state !== localStorage.getItem('state')) {
+            if (state !== getStorage().getItem('state')) {
                 throw new Error('Possible CSRF attack. Aborting login!')
             }
             try {
@@ -32,15 +32,15 @@ export default class CodeFlow {
                     access_token,
                     refresh_token,
                     id_token,
-                } = await this.service.getAuthorizationCodeToken(code, localStorage.getItem('codeVerifier'))
+                } = await this.service.getAuthorizationCodeToken(code, getStorage().getItem('codeVerifier'))
                 setTokens({accessToken: access_token, refreshToken: refresh_token, idToken: id_token})
                 setOptions({
                     clientId: this.options.clientId,
                     host: this.options.host,
                     redirectUri: this.options.redirectUri
                 })
-                localStorage.removeItem('state')
-                localStorage.removeItem('codeVerifier')
+                getStorage().removeItem('state')
+                getStorage().removeItem('codeVerifier')
 
                 // Remove state and code from the redirect url
                 const params = new URLSearchParams(window.location.search);
@@ -61,8 +61,8 @@ export default class CodeFlow {
 
     public async signIn(): Promise<void> {
         const {state, codeVerifier, codeChallenge} = await generatePkceChallenge()
-        localStorage.setItem("state", state)
-        localStorage.setItem("codeVerifier", codeVerifier);
+        getStorage().setItem("state", state)
+        getStorage().setItem("codeVerifier", codeVerifier);
         // @ts-ignore
         window.location = this.service.getAuthorizationCodeURL(
             codeChallenge,
