@@ -13,7 +13,7 @@ export default class Ws {
 
         const connect = () => {
             const ws = new WebSocket(
-                this.options.host + `/broadcast?token=` + accessToken,
+                this.options.host + `/?token=` + accessToken,
             );
             ws.onopen = function() {
                 console.log('WebSocket connected!');
