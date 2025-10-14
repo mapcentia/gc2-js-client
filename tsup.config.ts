@@ -8,7 +8,7 @@ export default defineConfig((options) => ({
     ],
     dts: true,
     outDir: "dist",
-    // format: ["esm", "cjs"],
+    format: ["esm", "cjs"],
     name: "@mapcentia/gc2-js-client",
     splitting: false,
     sourcemap: true,
