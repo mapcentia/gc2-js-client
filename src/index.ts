@@ -11,7 +11,8 @@ import Stats from "./Stats"
 import Tables from "./Tables"
 import createApi from "./Api"
 import type {RpcRequest, RpcResponse} from "./types/pgTypes"
-import type {Options, CodeFlowOptions} from "./util/utils"
+import type * as PgTypes from "./types/pgTypes"
+import type {Options, CodeFlowOptions, PasswordFlowOptions} from "./util/utils"
 
 export {
     CodeFlow,
@@ -33,6 +34,8 @@ export type {
     RpcResponse,
     Options,
     CodeFlowOptions,
+    PasswordFlowOptions,
+    PgTypes,
 }
 
 

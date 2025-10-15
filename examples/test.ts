@@ -1,4 +1,4 @@
-import {createApi, Rpc, Sql, PasswordFlow, PasswordFlowOptions} from "./../dist/index.js";
+import {createApi, Rpc, Sql, PasswordFlow, PasswordFlowOptions, PgTypes} from "./../dist/index.js";
 import {Api} from "./MyApi.ts";
 
 
@@ -13,7 +13,7 @@ const sql = new Sql()
 const rpc = new Rpc()
 
 // Usage with autocompletion + type-checking
-export async function testApi() {
+export async function testApi<Api>() {
 
     await passwordFlow.signIn()
 
