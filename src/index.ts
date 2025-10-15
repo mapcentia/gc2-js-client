@@ -9,6 +9,7 @@ import Users from "./Users"
 import Ws from "./Ws"
 import Stats from "./Stats"
 import Tables from "./Tables"
+import createApi from "./Api"
 import type {RpcRequest, RpcResponse} from "./types/pgTypes"
 import type {Options, CodeFlowOptions} from "./util/utils"
 
@@ -24,6 +25,7 @@ export {
     Ws,
     Stats,
     Tables,
+    createApi,
 }
 
 export type {

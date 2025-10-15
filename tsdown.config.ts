@@ -1,16 +1,16 @@
-// tsup.config.ts
+// tsdown.config.ts
 
-import { defineConfig } from "tsup";
+import { defineConfig } from "tsdown";
 
 export default defineConfig((options) => ({
     entry: [
-        "src",
+        "src/index.ts",
     ],
     dts: true,
     outDir: "dist",
     format: ["esm", "cjs"],
     name: "@mapcentia/gc2-js-client",
-    splitting: false,
+    splitting: true,
     sourcemap: true,
     clean: true,
     minify: false,

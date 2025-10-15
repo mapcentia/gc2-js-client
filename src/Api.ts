@@ -20,7 +20,7 @@ async function dispatch<K extends keyof any & string>(name: K, args: object|Arra
     return res.result.data
 }
 
-export function createApi<T>(): MethodsOf<T> {
+export default function createApi<T>(): MethodsOf<T> {
     return new Proxy(
         {},
         {

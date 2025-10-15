@@ -1,9 +1,6 @@
-import {createApi} from "./../dist/Api.js";
-import Rpc from "./../dist/Rpc.js";
-import Sql from "./../dist/Sql.js";
+import {createApi, Rpc, Sql, PasswordFlow, PasswordFlowOptions} from "./../dist/index.js";
 import {Api} from "./MyApi.ts";
-import PasswordFlow from "./../dist/PasswordFlow.js";
-import PasswordFlowOptions from "./../dist/util/utils.js";
+
 
 const options: PasswordFlowOptions = {username: 'mydb', password: 'hawk2000', clientId: 'gc2-cli', database: 'mydb', 'host': 'http://localhost:8080'}
 const passwordFlow = new PasswordFlow(options)
