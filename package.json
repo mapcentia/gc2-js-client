@@ -18,15 +18,14 @@
     "build"
   ],
   "scripts": {
-    "dev": "webpack -w",
+    "dev": "vite build --watch --mode development",
     "build": "tsup"
   },
   "devDependencies": {
-    "ts-loader": "^9.5.1",
+    "tsdown": "^0.15.7",
     "tsup": "^8.3.5",
     "typescript": "^5.6.3",
-    "webpack": "^5.96.1",
-    "webpack-cli": "^5.1.4"
+    "vite": "^5.4.10"
   },
   "private": false
 }

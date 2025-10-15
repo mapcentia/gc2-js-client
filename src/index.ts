@@ -9,25 +9,28 @@ import Users from "./Users"
 import Ws from "./Ws"
 import Stats from "./Stats"
 import Tables from "./Tables"
-import {RpcRequest, RpcResponse} from "./types/pgTypes"
-import {Options, CodeFlowOptions} from "./util/utils"
+import type {RpcRequest, RpcResponse} from "./types/pgTypes"
+import type {Options, CodeFlowOptions} from "./util/utils"
 
 export {
     CodeFlow,
     PasswordFlow,
     Sql,
     Rpc,
-    RpcRequest,
-    RpcResponse,
     Meta,
-    Options,
-    CodeFlowOptions,
     Status,
     Claims,
     Users,
     Ws,
     Stats,
     Tables,
+}
+
+export type {
+    RpcRequest,
+    RpcResponse,
+    Options,
+    CodeFlowOptions,
 }
 
 

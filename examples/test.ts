@@ -18,7 +18,7 @@ const rpc = new Rpc()
 // Usage with autocompletion + type-checking
 export async function testApi() {
 
-    //await passwordFlow.signIn()
+    await passwordFlow.signIn()
 
     const payload = {
         a: 1,
