@@ -1,5 +1,5 @@
 import {Gc2Service,} from './services/gc2.services'
-import { isLogin, setTokens, setOptions, PasswordFlowOptions} from './util/utils'
+import {isLogin, setTokens, setOptions, PasswordFlowOptions, clearTokens, clearOptions, clearNonce} from './util/utils'
 
 export default class PasswordFlow {
     options: PasswordFlowOptions
@@ -21,6 +21,12 @@ export default class PasswordFlow {
     }
 
     public signOut(): void {
-      //  this.service.clearTokens()
+        this.clear()
+    }
+
+    public clear(): void {
+        clearTokens()
+        clearOptions()
+        clearNonce()
     }
 }

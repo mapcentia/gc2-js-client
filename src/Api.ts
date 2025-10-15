@@ -7,7 +7,7 @@ type MethodsOf<T> = {
 
 // Implementation signature (wide) — overloads above control the public typing
 async function dispatch<K extends keyof any & string>(name: K, args: object|Array<object>): Promise<any> {
-    console.log("Dispatch:", name, args);
+    //console.log("Dispatch:", name, args);
     // route to real implementations:
     const rpc = new Rpc()
     const request: RpcRequest = {

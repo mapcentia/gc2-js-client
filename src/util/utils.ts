@@ -1,4 +1,4 @@
-import {jwtDecode} from 'jwt-decode'
+import {jwtDecode} from './jwt-decode'
 import {Gc2Service} from "../services/gc2.services";
 import {getStorage} from './storage'
 

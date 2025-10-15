@@ -21,9 +21,6 @@
     "dev": "webpack -w",
     "build": "tsup"
   },
-  "dependencies": {
-    "jwt-decode": "^4.0.0"
-  },
   "devDependencies": {
     "ts-loader": "^9.5.1",
     "tsup": "^8.3.5",

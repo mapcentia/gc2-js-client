@@ -7,7 +7,7 @@ import PasswordFlowOptions from "./../dist/util/utils.js";
 
 const options: PasswordFlowOptions = {username: 'mydb', password: 'hawk2000', clientId: 'gc2-cli', database: 'mydb', 'host': 'http://localhost:8080'}
 const passwordFlow = new PasswordFlow(options)
-passwordFlow.signIn()
+
 
 // Create the stubbed API
 const api = createApi<Api>();
@@ -17,6 +17,8 @@ const rpc = new Rpc()
 
 // Usage with autocompletion + type-checking
 export async function testApi() {
+
+    //await passwordFlow.signIn()
 
     const payload = {
         a: 1,
@@ -44,6 +46,9 @@ export async function testApi() {
         "id": 1
     })
     console.log(res3)
+
+    passwordFlow.signOut()
+
 
 }
 
