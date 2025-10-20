@@ -1,32 +1,34 @@
 {
   "name": "@centia-io/sdk",
-  "version": "0.0.26",
-  "description": "TypeScript client for Centia-io",
+  "version": "0.0.28",
+  "description": "Centia-io TypeScript SDK",
+  "author": "Martin Høgh",
+  "license": "MIT",
   "type": "module",
-  "main": "./dist/index.js",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "./dist/centia-io-sdk.cjs",
+  "module": "./dist/centia-io-sdk.js",
+  "types": "./dist/centia-io-sdk.d.cts",
   "exports": {
     ".": "./src/index.ts",
     "./package.json": "./package.json"
   },
   "files": [
-    "dist",
-    "build"
+    "dist"
   ],
   "scripts": {
-    "dev": "vite build --watch --mode development",
     "build": "tsdown --watch"
   },
   "devDependencies": {
     "tsdown": "^0.15.7",
-    "typescript": "^5.6.3",
-    "vite": "^5.4.10"
+    "typescript": "^5.6.3"
   },
   "private": false,
   "publishConfig": {
     "exports": {
-      ".": "./dist/index.js",
+      ".": {
+        "import": "./dist/centia-io-sdk.js",
+        "require": "./dist/centia-io-sdk.cjs"
+      },
       "./package.json": "./package.json"
     }
   }

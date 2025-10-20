@@ -1,6 +1,9 @@
 import { defineConfig } from 'tsdown'
 
 export default defineConfig({
+    entry: {
+        'centia-io-sdk': './src/index.ts'
+    },
     dts: {
         sourcemap: true,
     },
@@ -8,4 +11,6 @@ export default defineConfig({
     exports: {
         devExports: true,
     },
+    format: ["esm", "cjs", "umd"],
+    globalName: "CentiaSDK"
 })
