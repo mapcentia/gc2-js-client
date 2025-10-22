@@ -25,7 +25,6 @@ export {
     Users,
     Ws,
     Stats,
-    Tables,
     createApi,
 }
 
