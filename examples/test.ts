@@ -1,8 +1,8 @@
-import {createApi, Rpc, Sql, PasswordFlow, PasswordFlowOptions, PgTypes} from "./../dist/index.js";
+import {createApi, Rpc, Sql, PasswordFlow, PasswordFlowOptions, PgTypes} from "./../dist/centia-io-sdk.js";
 import {Api} from "./MyApi.ts";
 
 
-const options: PasswordFlowOptions = {username: 'mydb', password: 'hawk2000', clientId: 'gc2-cli', database: 'mydb', 'host': 'http://localhost:8080'}
+const options: PasswordFlowOptions = {username: 'mydb', password: 'hawk2000', clientId: 'gc2-cli', database: 'mydb', host: 'http://localhost:8080'}
 const passwordFlow = new PasswordFlow(options)
 
 
@@ -54,3 +54,9 @@ testApi().catch((err) => {
   // Prevent unhandled promise rejection from crashing Node
   process.exitCode = 1;
 });
+
+import WebSocket from 'ws';
+const token = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczovL2FwaS5jZW50aWEuaW8iLCJ1aWQiOiJtaG1hcGNlbnRpYWNvbV9zbHVnIiwiZXhwIjoxNzYxMDY4NjIzLCJpYXQiOjE3NjEwNjUwMjMsImRhdGFiYXNlIjoibWhtYXBjZW50aWFjb21fc2x1ZyIsInN1cGVyVXNlciI6dHJ1ZSwidXNlckdyb3VwIjpudWxsLCJyZXNwb25zZV90eXBlIjoidG9rZW4iLCJwcm9wZXJ0aWVzIjpudWxsLCJlbWFpbCI6Im1oQG1hcGNlbnRpYS5jb20ifQ.WqZhqzeLLnkxIUM0C5xdMr8JCND8aDw3ajRZhFp0uig';
+const ws = new WebSocket(`wss://api.centia.io/?token=${encodeURIComponent(token)}`);
+ws.on('open', () => ws.send('SELECT 42 AS answer'));
+ws.on('message', (data) => console.log(JSON.parse(data.toString())));

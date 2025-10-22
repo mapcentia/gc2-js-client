@@ -1,59 +1,61 @@
 import {jwtDecode} from './jwt-decode'
-import {Gc2Service} from "../services/gc2.services";
+import {Gc2Service} from "../services/gc2.services"
 import {getStorage} from './storage'
 
 export type Tokens = {
-    accessToken: string;
-    refreshToken: string;
-    idToken?: string;
-};
+    accessToken: string
+    refreshToken: string
+    idToken?: string
+}
 
 export type Options = {
-    host: string;
-    wsHost?: string;
-    tokenUri?: string;
-    authUri?: string;
-    logoutUri?: string;
-    deviceUri?: string;
-    scope?: string;
-    clientId: string;
+    host: string
+    wsHost?: string
+    tokenUri?: string
+    authUri?: string
+    logoutUri?: string
+    deviceUri?: string
+    scope?: string
+    clientId: string
 }
 
 export type CodeFlowOptions = Options & {
-    redirectUri: string;
+    redirectUri: string
 }
 
 export type PasswordFlowOptions = Options & {
-    username: string;
-    password: string;
-    database: string;
+    username: string
+    password: string
+    database: string
 }
 
 export type WsOptions = {
-    host: string;
-    callBack?: any;
+    host: string
+    callBack: Function
+    rel?: string
+    wsClient?: unknown
 }
 
 export type GetDeviceCodeResponse = {
-    device_code: string;
-    user_code: string;
-    verification_uri: string;
-    verification_uri_complete?: string;
-    expires_in: number;
-    interval: number;
-};
+    device_code: string
+    user_code: string
+    verification_uri: string
+    verification_uri_complete?: string
+    expires_in: number
+    interval: number
+}
 
 export type GetTokenResponse = {
-    access_token: string;
-    expires_in: number;
-    refresh_expires_in: number;
-    refresh_token: string;
-    id_token?: string;
-    token_type: string;
-    'not-before-policy': number;
-    session_state: string;
-    scope: string;
-};
+    access_token: string
+    expires_in: number
+    refresh_expires_in: number
+    refresh_token: string
+    id_token?: string
+    token_type: string
+    'not-before-policy': number
+    session_state: string
+    scope: string
+}
 
 
 export const generatePkceChallenge = async () => {
