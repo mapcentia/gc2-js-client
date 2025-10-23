@@ -29,6 +29,13 @@ export type PasswordFlowOptions = Options & {
     database: string
 }
 
+export type SignUpOptions = Options & {
+    host: string
+    clientId: string
+    parentDb: string
+    redirectUri: string
+}
+
 export type WsOptions = {
     host: string
     callBack: Function

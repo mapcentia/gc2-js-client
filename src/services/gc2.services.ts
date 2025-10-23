@@ -1,20 +1,23 @@
-import {CodeFlowOptions, GetDeviceCodeResponse, getNonce, GetTokenResponse, PasswordFlowOptions} from '../util/utils';
+import {CodeFlowOptions, GetDeviceCodeResponse, getNonce, GetTokenResponse, PasswordFlowOptions, SignUpOptions} from '../util/utils';
 
 export class Gc2Service {
     private readonly options: CodeFlowOptions | PasswordFlowOptions;
     private readonly host: string;
 
-    constructor(options: CodeFlowOptions | PasswordFlowOptions) {
+    constructor(options: CodeFlowOptions | PasswordFlowOptions | SignUpOptions) {
         this.options = options;
         this.host = options.host;
     }
 
     // Type guards to check if options is CodeFlowOptions or PasswordFlowOptions
-    private isCodeFlowOptions(options: CodeFlowOptions | PasswordFlowOptions): options is CodeFlowOptions {
+    private isCodeFlowOptions(options: CodeFlowOptions | PasswordFlowOptions | SignUpOptions): options is CodeFlowOptions {
         return 'redirectUri' in options;
     }
-    private isPasswordFlowOptions(options: CodeFlowOptions | PasswordFlowOptions): options is PasswordFlowOptions {
+    private isPasswordFlowOptions(options: CodeFlowOptions | PasswordFlowOptions| SignUpOptions): options is PasswordFlowOptions {
         return 'username' in options;
+    }
+    private isSignUpOptions(options: CodeFlowOptions | PasswordFlowOptions| SignUpOptions): options is SignUpOptions {
+        return 'parentDb' in options;
     }
 
     private buildUrl(path: string): string {
@@ -120,6 +123,18 @@ export class Gc2Service {
         if (this.options.scope) {
             params.set('scope', this.options.scope);
         }
+        return `${base}?${params.toString()}`;
+    }
+
+    getSignUpURL(): string {
+        if (!this.isSignUpOptions(this.options)) {
+            throw new Error('CodeFlow options required for this operation')
+        }
+        const base = this.options.authUri ?? `${this.host}/signup/`
+        const params = new URLSearchParams()
+        params.set('client_id', this.options.clientId)
+        params.set('parentdb', this.options.parentDb)
+        params.set('redirect_uri', this.options.redirectUri)
         return `${base}?${params.toString()}`;
     }
 

@@ -10,6 +10,7 @@ import Ws from "./Ws"
 import Stats from "./Stats"
 import Tables from "./Tables"
 import createApi from "./Api"
+import SignUp from "./SignUp"
 import type {RpcRequest, RpcResponse} from "./types/pgTypes"
 import type * as PgTypes from "./types/pgTypes"
 import type {Options, CodeFlowOptions, PasswordFlowOptions} from "./util/utils"
@@ -25,7 +26,9 @@ export {
     Users,
     Ws,
     Stats,
+    Tables,
     createApi,
+    SignUp
 }
 
 export type {
