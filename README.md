@@ -205,6 +205,76 @@ interface Row extends PgTypes.DataRow {
 const res = await sql.exec({ q: "...", params: payload }) as PgTypes.SQLResponse<Row>;
 ```
 
+## SQL Builder
+
+Build strongly typed SQL requests from a DB schema so you don't write raw SQL.
+
+- Function: `createSqlBuilder(schema)`
+- Types: `DBSchema`, `TableDef`, `ColumnDef`
+- Supports: `select(where/orderBy/limit/offset)`, `insert(returning)`, `update(where, returning)`, `delete(where, returning)`
+- Produces an object with `toSql(): SqlRequest` which you pass to `new Sql().exec()`
+
+Example:
+```ts
+import { createSqlBuilder, Sql } from "@centia-io/sdk";
+import type { DBSchema } from "@centia-io/sdk";
+
+// Minimal schema (compatible with schema/schema.json).
+const schema = {
+  name: "public",
+  tables: [
+    {
+      name: "items",
+      columns: [
+        { name: "id", _typname: "int4", _is_array: false, is_nullable: false },
+        { name: "name", _typname: "varchar", _is_array: false, is_nullable: true },
+        { name: "type", _typname: "int4", _is_array: false, is_nullable: true }
+      ]
+    }
+  ]
+} as const satisfies DBSchema;
+
+const b = createSqlBuilder(schema);
+
+// SELECT with where/order/limit
+const selectReq = b.table("items")
+  .select(["id", "name"]) // or omit to select all: .select()
+  .where({ type: [1, 2, 3] }) // => "type" = ANY(:param)
+  .orderBy([["id","desc"]])
+  .limit(10)
+  .toSql();
+
+const sql = new Sql();
+const rows = (await sql.exec(selectReq)).data;
+
+// INSERT
+const insertReq = b.table("items")
+  .insert({ id: 10, name: "Thing", type: 1 })
+  .returning(["id"])
+  .toSql();
+await sql.exec(insertReq);
+
+// UPDATE
+const updateReq = b.table("items")
+  .update({ name: "Updated" })
+  .where({ id: 10 })
+  .returning(["id","name"])
+  .toSql();
+await sql.exec(updateReq);
+
+// DELETE
+const deleteReq = b.table("items")
+  .delete()
+  .where({ id: 10 })
+  .toSql();
+await sql.exec(deleteReq);
+```
+
+Notes:
+- The builder automatically adds `type_hints` for array parameters (e.g., `int4[]`), as arrays are not inferred by default by the server.
+- Value types are inferred from `_typname` and `_is_array`. For `numeric/decimal`, use strings (`NumericString`).
+- You can pass the same `SqlRequest` object to `Sql.exec`.
+
 ## RPC
 
 Call JSON‑RPC methods exposed by GC2.

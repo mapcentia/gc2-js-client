@@ -11,6 +11,7 @@ import Stats from "./Stats"
 import Tables from "./Tables"
 import createApi from "./Api"
 import SignUp from "./SignUp"
+import { createSqlBuilder } from "./SqlBuilder"
 import type {RpcRequest, RpcResponse} from "./types/pgTypes"
 import type * as PgTypes from "./types/pgTypes"
 import type {Options, CodeFlowOptions, PasswordFlowOptions} from "./util/utils"
@@ -28,7 +29,8 @@ export {
     Stats,
     Tables,
     createApi,
-    SignUp
+    SignUp,
+    createSqlBuilder,
 }
 
 export type {
@@ -39,5 +41,7 @@ export type {
     PasswordFlowOptions,
     PgTypes,
 }
+
+export type { DBSchema, TableDef, ColumnDef } from "./SqlBuilder";
 
 
