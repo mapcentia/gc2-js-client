@@ -84,8 +84,8 @@
 <script>
     // Initialize CodeFlow using inputs so users can adapt config
     let codeFlow;
+    let signUpFlow;
     let tablesApi;
-
 
     const $ = (sel) => document.querySelector(sel);
     const setAuthUI = (signedIn) => {
@@ -103,11 +103,23 @@
         codeFlow = new CentiaSDK.CodeFlow({ redirectUri, clientId, host, scope: 'openid' });
         tablesApi = new CentiaSDK.Tables();
 
-        $('#login-btn').onclick = () => codeFlow.signIn();
-        $('#logout-btn').onclick = () => { codeFlow.signOut(); location.reload(); };
+        // $('#login-btn').onclick = () => codeFlow.signIn();
+        // $('#logout-btn').onclick = () => { codeFlow.signOut(); location.reload(); };
     };
 
     initCodeFlow();
+
+    const initSignupFlow = () => {
+        const redirectUri = $('#redirectUri').value.trim();
+        const clientId = $('#clientId').value.trim();
+        const host = $('#host').value.trim();
+        signUpFlow = new CentiaSDK.SignUp({ redirectUri, clientId, host, parentDb: 'mydb' });
+
+        $('#login-btn').onclick = () => signUpFlow.signUp();
+        $('#logout-btn').onclick = () => { codeFlow.signOut(); location.reload(); };
+    };
+
+    initSignupFlow();
 
     // Handle auth callback and UI state
     codeFlow.redirectHandle().then(isSignedIn => {

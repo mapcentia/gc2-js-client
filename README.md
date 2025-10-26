@@ -30,7 +30,7 @@ Requirements:
 
 ESM import:
 ```ts
-import { CodeFlow, PasswordFlow, Sql, Rpc, createApi } from "@centia-io/sdk";
+import { CodeFlow, PasswordFlow, Sql, Rpc, createApi, SignUp } from "@centia-io/sdk";
 import type { RpcRequest, RpcResponse, PgTypes } from "@centia-io/sdk";
 ```
 
@@ -114,6 +114,38 @@ await flow.signIn();
 
 flow.signOut(); // Clears tokens/options in local storage (no redirect)
 ```
+
+### SignUp (Browser – Create a new user)
+
+Use this helper in browser applications to redirect the user to the Centia‑io sign‑up page. 
+The user will create an account under a specified parent database/tenant and then be redirected back to your application.
+
+Required options:
+- host: Base URL of your Centia‑io instance, e.g. https://api.centia.io
+- clientId: OAuth client id configured in Centia.io
+- parentDb: The parent/tenant database under which the new user should be created
+- redirectUri: URL in your app to return to after sign‑up
+
+Example (vanilla JS/TS):
+```ts
+import { SignUp } from "@centia-io/sdk";
+
+const signUp = new SignUp({
+  host: "https://api.centia.io",
+  clientId: "your-client-id",
+  parentDb: "your-parent-database",
+  redirectUri: window.location.origin + "/auth/callback"
+});
+
+// Start sign-up when the user clicks "Create account"
+function onSignUpClick() {
+  signUp.signUp(); // Redirects to GC2 sign-up page
+}
+```
+
+Notes:
+- Default endpoint is {host}/signup/. You can override with authUri if needed.
+- After the user completes sign‑up and is redirected back to your app, start your normal sign‑in flow (e.g., CodeFlow. A session is started when the user signed up, so the user will be signed in automatically in the flow.)
 
 ## SQL
 
