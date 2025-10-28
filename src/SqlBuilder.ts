@@ -51,6 +51,14 @@ export type ScalarFromTypename<T extends string> =
   T extends "timestamp" ? PgTypes.TimestampString :
   T extends "timestamptz" ? PgTypes.TimestamptzString :
   T extends "interval" ? PgTypes.IntervalValue :
+  // Geometric
+  T extends "point" ? PgTypes.Point :
+  T extends "line" ? PgTypes.Line :
+  T extends "lseg" ? PgTypes.Lseg :
+  T extends "box" ? PgTypes.Box :
+  T extends "path" ? PgTypes.Path :
+  T extends "polygon" ? PgTypes.Polygon :
+  T extends "circle" ? PgTypes.Circle :
   // Ranges
   T extends "int4range" ? PgTypes.Int4Range :
   T extends "int8range" ? PgTypes.Int8Range :
@@ -177,7 +185,7 @@ function addTypeHintForParam(
 }
 
 // Runtime value type validation helpers for whereOp predicates
-function expectedScalarKind(typname: string): "number" | "string" | "boolean" | "json" | "range" | "interval" | "unknown" {
+function expectedScalarKind(typname: string): "number" | "string" | "boolean" | "json" | "range" | "interval" | "geom" | "unknown" {
   const t = typname.toLowerCase();
   if (t === "int2" || t === "int4" || t === "int8" || t === "float4" || t === "float8") return "number";
   if (t === "numeric" || t === "decimal") return "string"; // numeric represented as string in SDK
@@ -186,6 +194,7 @@ function expectedScalarKind(typname: string): "number" | "string" | "boolean" | 
   if (t === "json" || t === "jsonb") return "json";
   if (t === "int4range" || t === "int8range" || t === "numrange" || t === "tsrange" || t === "tstzrange" || t === "daterange") return "range";
   if (t === "interval") return "interval";
+  if (t === "point" || t === "line" || t === "lseg" || t === "box" || t === "path" || t === "polygon" || t === "circle") return "geom";
   return "unknown";
 }
 
@@ -198,6 +207,87 @@ function expectedRangeInnerKind(typname: string): "number" | "string" | "unknown
 
 function isPlainObject(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v);
+}
+
+function isFiniteNumber(n: unknown): n is number {
+  return typeof n === "number" && Number.isFinite(n);
+}
+
+function isPointLike(v: unknown): v is { x: number; y: number } {
+  if (!isPlainObject(v)) return false;
+  const x = (v as any).x;
+  const y = (v as any).y;
+  return isFiniteNumber(x) && isFiniteNumber(y);
+}
+
+function validateGeometryForColumn(col: ColumnDef, value: unknown, context: string): void {
+  const t = col._typname.toLowerCase();
+
+  if (t === "point") {
+    if (!isPointLike(value)) {
+      throw new Error(`Invalid value for ${context}. Expected Point { x: number, y: number }`);
+    }
+    return;
+  }
+
+  if (t === "line") {
+    if (!isPlainObject(value)) throw new Error(`Invalid value for ${context}. Expected Line { A: number, B: number, C: number }`);
+    const A = (value as any).A, B = (value as any).B, C = (value as any).C;
+    if (!isFiniteNumber(A) || !isFiniteNumber(B) || !isFiniteNumber(C)) {
+      throw new Error(`Invalid Line for ${context}. A, B, C must be finite numbers`);
+    }
+    return;
+  }
+
+  if (t === "lseg" || t === "box") {
+    if (!isPlainObject(value)) throw new Error(`Invalid value for ${context}. Expected ${t.toUpperCase()} { start: Point, end: Point }`);
+    const start = (value as any).start;
+    const end = (value as any).end;
+    if (!isPointLike(start) || !isPointLike(end)) {
+      throw new Error(`Invalid ${t} for ${context}. 'start' and 'end' must be Point { x, y }`);
+    }
+    return;
+  }
+
+  if (t === "path") {
+    if (!Array.isArray(value) || value.length < 1) {
+      throw new Error(`Invalid value for ${context}. Expected Path [isClosed: boolean, ...points: Point[]]`);
+    }
+    const [isClosed, ...points] = value as any[];
+    if (typeof isClosed !== "boolean") {
+      throw new Error(`Invalid Path for ${context}. First element must be boolean (isClosed)`);
+    }
+    for (let i = 0; i < points.length; i++) {
+      if (!isPointLike(points[i])) {
+        throw new Error(`Invalid Path for ${context}. Element at index ${i + 1} must be Point { x, y }`);
+      }
+    }
+    return;
+  }
+
+  if (t === "polygon") {
+    if (!Array.isArray(value)) {
+      throw new Error(`Invalid value for ${context}. Expected Polygon as Point[]`);
+    }
+    for (let i = 0; i < value.length; i++) {
+      if (!isPointLike((value as any)[i])) {
+        throw new Error(`Invalid Polygon for ${context}. Element at index ${i} must be Point { x, y }`);
+      }
+    }
+    return;
+  }
+
+  if (t === "circle") {
+    if (!isPlainObject(value)) throw new Error(`Invalid value for ${context}. Expected Circle { center: Point, radius: number }`);
+    const center = (value as any).center;
+    const radius = (value as any).radius;
+    if (!isPointLike(center) || !isFiniteNumber(radius)) {
+      throw new Error(`Invalid Circle for ${context}. 'center' must be Point and 'radius' must be finite number`);
+    }
+    return;
+  }
+
+  // Unknown geometric subtype; skip
 }
 
 function validateRangeForColumn(col: ColumnDef, value: unknown, context: string): void {
@@ -295,6 +385,10 @@ function validateScalarForColumn(col: ColumnDef, value: unknown, context: string
   }
   if (kind === "interval") {
     validateIntervalForColumn(col, value, context);
+    return;
+  }
+  if (kind === "geom") {
+    validateGeometryForColumn(col, value, context);
     return;
   }
 }
