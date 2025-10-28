@@ -514,6 +514,9 @@ class TableQueryImpl<S extends DBSchema, TN extends string> implements TableQuer
           const paramName = `${table.name}_${key}_${p}`;
 
           if (value === null) {
+            if (!col.is_nullable) {
+              throw new Error(`Column ${table.name}.${key} is not nullable; cannot compare to null`);
+            }
             andParts.push(`"${table.name}"."${key}" is null`);
           } else if (Array.isArray(value)) {
             // Validate array element types (treat as IN semantics)
@@ -595,6 +598,9 @@ class TableQueryImpl<S extends DBSchema, TN extends string> implements TableQuer
             p += 1;
             const paramName = `${table.name}_${key}_${p}`;
             if (value === null) {
+              if (!col.is_nullable) {
+                throw new Error(`Column ${table.name}.${key} is not nullable; cannot compare to null`);
+              }
               orParts.push(`"${table.name}"."${key}" is null`);
             } else if (Array.isArray(value)) {
               // Validate array element types (treat as IN semantics)
