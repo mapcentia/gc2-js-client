@@ -50,6 +50,7 @@ export type ScalarFromTypename<T extends string> =
   T extends "timetz" ? PgTypes.TimetzString :
   T extends "timestamp" ? PgTypes.TimestampString :
   T extends "timestamptz" ? PgTypes.TimestamptzString :
+  T extends "interval" ? PgTypes.IntervalValue :
   // Ranges
   T extends "int4range" ? PgTypes.Int4Range :
   T extends "int8range" ? PgTypes.Int8Range :
@@ -176,7 +177,7 @@ function addTypeHintForParam(
 }
 
 // Runtime value type validation helpers for whereOp predicates
-function expectedScalarKind(typname: string): "number" | "string" | "boolean" | "json" | "range" | "unknown" {
+function expectedScalarKind(typname: string): "number" | "string" | "boolean" | "json" | "range" | "interval" | "unknown" {
   const t = typname.toLowerCase();
   if (t === "int2" || t === "int4" || t === "int8" || t === "float4" || t === "float8") return "number";
   if (t === "numeric" || t === "decimal") return "string"; // numeric represented as string in SDK
@@ -184,6 +185,7 @@ function expectedScalarKind(typname: string): "number" | "string" | "boolean" | 
   if (t === "bool") return "boolean";
   if (t === "json" || t === "jsonb") return "json";
   if (t === "int4range" || t === "int8range" || t === "numrange" || t === "tsrange" || t === "tstzrange" || t === "daterange") return "range";
+  if (t === "interval") return "interval";
   return "unknown";
 }
 
@@ -233,6 +235,23 @@ function validateRangeForColumn(col: ColumnDef, value: unknown, context: string)
   }
 }
 
+function validateIntervalForColumn(col: ColumnDef, value: unknown, context: string): void {
+  if (!isPlainObject(value)) {
+    throw new Error(`Invalid value for ${context}. Expected an interval object for type ${col._typname}`);
+  }
+  const v = value as Record<string, unknown>;
+  const keys: (keyof PgTypes.IntervalValue)[] = ["y", "m", "d", "h", "i", "s"];
+  for (const k of keys) {
+    if (!Object.prototype.hasOwnProperty.call(v, k)) {
+      throw new Error(`Invalid interval for ${context}. Missing property '${k}'`);
+    }
+    const num = (v as any)[k];
+    if (typeof num !== "number" || !Number.isFinite(num)) {
+      throw new Error(`Invalid interval.${String(k)} for ${context}. Expected finite number`);
+    }
+  }
+}
+
 function isValidJsonLike(value: unknown): boolean {
   return (
     value === null ||
@@ -272,6 +291,10 @@ function validateScalarForColumn(col: ColumnDef, value: unknown, context: string
   }
   if (kind === "range") {
     validateRangeForColumn(col, value, context);
+    return;
+  }
+  if (kind === "interval") {
+    validateIntervalForColumn(col, value, context);
     return;
   }
 }
