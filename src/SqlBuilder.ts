@@ -53,6 +53,18 @@ export type TableByName<S extends DBSchema, TN extends string> = Extract<S["tabl
 export type ColumnsOf<S extends DBSchema, TN extends string> = TableByName<S, TN>["columns"];
 export type ColumnNames<S extends DBSchema, TN extends string> = ColumnsOf<S, TN>[number]["name"];
 
+// Constraint helpers for typing allowed JOIN targets
+type ConstraintsOfTable<T extends TableDef> = T["constraints"] extends readonly any[] ? T["constraints"][number] : never;
+
+type ReferencedTablesOfTable<T extends TableDef> = ConstraintsOfTable<T> extends infer C
+  ? C extends { constraint: "foreign"; referenced_table: infer RT extends string }
+    ? RT
+    : never
+  : never;
+
+// Allowed join targets when selecting from TN: only tables referenced by TN via foreign key constraints
+export type AllowedJoinTables<S extends DBSchema, TN extends string> = ReferencedTablesOfTable<TableByName<S, TN>>;
+
 // Value type for a column based on typname and array/nullability flags.
 // Note: If schema is not `as const`, flags are not literal and result type becomes broader.
 export type ColumnValueFromDef<C extends ColumnDef> =
@@ -149,7 +161,7 @@ export interface SelectQuery<S extends DBSchema, TN extends string> {
   orderBy: (order: ReadonlyArray<readonly [ColumnNames<S, TN>, "asc" | "desc"]> | ColumnNames<S, TN>) => SelectQuery<S, TN>;
   limit: (n: number) => SelectQuery<S, TN>;
   offset: (n: number) => SelectQuery<S, TN>;
-  join: <JT extends TableNames<S>>(table: JT, type?: "inner" | "left" | "right" | "full") => SelectQuery<S, TN>;
+  join: <JT extends AllowedJoinTables<S, TN>>(table: JT, type?: "inner" | "left" | "right" | "full") => SelectQuery<S, TN>;
   toSql: () => SqlRequest<Record<string, unknown>>;
 }
 
@@ -217,7 +229,7 @@ class TableQueryImpl<S extends DBSchema, TN extends string> implements TableQuer
       limit = (n: number) => { this.s.limit = n; return this; };
       offset = (n: number) => { this.s.offset = n; return this; };
 
-      join = <JT extends TableNames<S>>(tableName: JT, type: "inner" | "left" | "right" | "full" = "inner") => {
+      join = <JT extends AllowedJoinTables<S, TN>>(tableName: JT, type: "inner" | "left" | "right" | "full" = "inner") => {
         const target = findTable(schema, String(tableName));
         const pairs = findJoinOn(table, target);
         if (!pairs || !pairs.length) throw new Error(`No foreign key relation found between ${table.name} and ${target.name}`);
