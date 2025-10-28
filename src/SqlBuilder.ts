@@ -490,12 +490,12 @@ class TableQueryImpl<S extends DBSchema, TN extends string> implements TableQuer
             selectParts.push(cols.map(c => `"${js.target.name}"."${c}"`).join(", "));
           }
         }
-        parts.push(`select ${selectParts.join(", ")} from "${table.name}"`);
+        parts.push(`select ${selectParts.join(", ")} from "${schema.name}"."${table.name}"`);
 
         // JOINs
         for (const j of state.joins) {
           const onExpr = j.on.map(p => `"${table.name}"."${p.left}" = "${j.target.name}"."${p.right}"`).join(" and ");
-          parts.push(`${j.type} join "${j.target.name}" on ${onExpr}`);
+          parts.push(`${j.type} join "${schema.name}"."${j.target.name}" on ${onExpr}`);
         }
 
         // Build WHERE with correct AND/OR semantics:
@@ -699,6 +699,7 @@ class TableQueryImpl<S extends DBSchema, TN extends string> implements TableQuer
 
   insert(values: ValuesForTable<S, TN>): InsertQuery<S, TN> {
     const table = this.table;
+    const schema = this.schema;
     const state = { values, returning: [] as ColumnNames<S, TN>[] };
 
     return new (class implements InsertQuery<S, TN> {
@@ -723,7 +724,7 @@ class TableQueryImpl<S extends DBSchema, TN extends string> implements TableQuer
         }
 
         const parts: string[] = [];
-        parts.push(`insert into "${table.name}" (${cols.join(", ")}) values (${vals.join(", ")})`);
+        parts.push(`insert into "${schema.name}"."${table.name}" (${cols.join(", ")}) values (${vals.join(", ")})`);
         if (state.returning.length) parts.push("returning " + state.returning.join(", "));
 
         return {
@@ -737,6 +738,7 @@ class TableQueryImpl<S extends DBSchema, TN extends string> implements TableQuer
 
   update(values: Partial<ValuesForTable<S, TN>>): UpdateQuery<S, TN> {
     const table = this.table;
+    const schema = this.schema;
     const state = { values, where: {} as WhereForTable<S, TN>, returning: [] as ColumnNames<S, TN>[] };
 
     return new (class implements UpdateQuery<S, TN> {
@@ -766,12 +768,19 @@ class TableQueryImpl<S extends DBSchema, TN extends string> implements TableQuer
           p += 1;
           const paramName = `${table.name}_${key}_${p}`;
           if (value === null) {
+            if (!col.is_nullable) {
+              throw new Error(`Column ${table.name}.${key} is not nullable; cannot compare to null`);
+            }
             whereClauses.push(`"${key}" is null`);
           } else if (Array.isArray(value)) {
+            // Validate array element types (treat as IN semantics)
+            validateInArrayValues(col, key, value as unknown[], "in");
             whereClauses.push(`"${key}" = ANY(:${paramName})`);
             params[paramName] = value;
             addTypeHintForParam(type_hints, paramName, col, value);
           } else {
+            // Validate scalar matches column type
+            validateScalarForColumn(col, value, `column ${key}`);
             whereClauses.push(`"${key}" = :${paramName}`);
             params[paramName] = value;
             addTypeHintForParam(type_hints, paramName, col, value);
@@ -779,7 +788,7 @@ class TableQueryImpl<S extends DBSchema, TN extends string> implements TableQuer
         }
 
         const parts: string[] = [];
-        parts.push(`update "${table.name}" set ${setParts.join(", ")}`);
+        parts.push(`update "${schema.name}"."${table.name}" set ${setParts.join(", ")}`);
         if (whereClauses.length) parts.push("where " + whereClauses.join(" and "));
         if (state.returning.length) parts.push("returning " + state.returning.join(", "));
 
@@ -794,6 +803,7 @@ class TableQueryImpl<S extends DBSchema, TN extends string> implements TableQuer
 
   delete(): DeleteQuery<S, TN> {
     const table = this.table;
+    const schema = this.schema;
     const state = { where: {} as WhereForTable<S, TN>, returning: [] as ColumnNames<S, TN>[] };
 
     return new (class implements DeleteQuery<S, TN> {
@@ -812,12 +822,19 @@ class TableQueryImpl<S extends DBSchema, TN extends string> implements TableQuer
           p += 1;
           const paramName = `${table.name}_${key}_${p}`;
           if (value === null) {
+            if (!col.is_nullable) {
+              throw new Error(`Column ${table.name}.${key} is not nullable; cannot compare to null`);
+            }
             whereClauses.push(`"${key}" is null`);
           } else if (Array.isArray(value)) {
+            // Validate array element types (treat as IN semantics)
+            validateInArrayValues(col, key, value as unknown[], "in");
             whereClauses.push(`"${key}" = ANY(:${paramName})`);
             params[paramName] = value;
             addTypeHintForParam(type_hints, paramName, col, value);
           } else {
+            // Validate scalar matches column type
+            validateScalarForColumn(col, value, `column ${key}`);
             whereClauses.push(`"${key}" = :${paramName}`);
             params[paramName] = value;
             addTypeHintForParam(type_hints, paramName, col, value);
@@ -825,7 +842,7 @@ class TableQueryImpl<S extends DBSchema, TN extends string> implements TableQuer
         }
 
         const parts: string[] = [];
-        parts.push(`delete from "${table.name}"`);
+        parts.push(`delete from "${schema.name}"."${table.name}"`);
         if (whereClauses.length) parts.push("where " + whereClauses.join(" and "));
         if (state.returning.length) parts.push("returning " + state.returning.join(", "));
 
