@@ -34,17 +34,29 @@ export interface DBSchema {
 // ---------- Type helpers (best effort) ----------
 // Map Postgres typname -> TypeScript value types used by PgTypes
 export type ScalarFromTypename<T extends string> =
+  // Numeric
   T extends "int2" | "int4" | "int8" ? number :
   T extends "float4" | "float8" ? number :
   T extends "numeric" | "decimal" ? PgTypes.NumericString :
+  // Character
   T extends "varchar" | "text" | "bpchar" | "char" ? string :
+  // Boolean
   T extends "bool" ? PgTypes.PgBoolean :
+  // JSON
   T extends "json" | "jsonb" ? PgTypes.JsonValue :
+  // Date/Time
   T extends "date" ? PgTypes.DateString :
   T extends "time" ? PgTypes.TimeString :
   T extends "timetz" ? PgTypes.TimetzString :
   T extends "timestamp" ? PgTypes.TimestampString :
   T extends "timestamptz" ? PgTypes.TimestamptzString :
+  // Ranges
+  T extends "int4range" ? PgTypes.Int4Range :
+  T extends "int8range" ? PgTypes.Int8Range :
+  T extends "numrange" ? PgTypes.NumRange :
+  T extends "tsrange" ? PgTypes.TsRange :
+  T extends "tstzrange" ? PgTypes.TstzRange :
+  T extends "daterange" ? PgTypes.DateRange :
   unknown;
 
 // If schema object is declared with `as const`, these produce better types.
@@ -164,14 +176,61 @@ function addTypeHintForParam(
 }
 
 // Runtime value type validation helpers for whereOp predicates
-function expectedScalarKind(typname: string): "number" | "string" | "boolean" | "json" | "unknown" {
+function expectedScalarKind(typname: string): "number" | "string" | "boolean" | "json" | "range" | "unknown" {
   const t = typname.toLowerCase();
   if (t === "int2" || t === "int4" || t === "int8" || t === "float4" || t === "float8") return "number";
   if (t === "numeric" || t === "decimal") return "string"; // numeric represented as string in SDK
   if (t === "varchar" || t === "text" || t === "bpchar" || t === "char" || t === "date" || t === "time" || t === "timetz" || t === "timestamp" || t === "timestamptz") return "string";
   if (t === "bool") return "boolean";
   if (t === "json" || t === "jsonb") return "json";
+  if (t === "int4range" || t === "int8range" || t === "numrange" || t === "tsrange" || t === "tstzrange" || t === "daterange") return "range";
   return "unknown";
+}
+
+function expectedRangeInnerKind(typname: string): "number" | "string" | "unknown" {
+  const t = typname.toLowerCase();
+  if (t === "int4range" || t === "int8range") return "number";
+  if (t === "numrange" || t === "tsrange" || t === "tstzrange" || t === "daterange") return "string";
+  return "unknown";
+}
+
+function isPlainObject(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null && !Array.isArray(v);
+}
+
+function validateRangeForColumn(col: ColumnDef, value: unknown, context: string): void {
+  if (!isPlainObject(value)) {
+    throw new Error(`Invalid value for ${context}. Expected a range object for type ${col._typname}`);
+  }
+  const r = value as Record<string, unknown>;
+  const hasLower = Object.prototype.hasOwnProperty.call(r, "lower");
+  const hasUpper = Object.prototype.hasOwnProperty.call(r, "upper");
+  const hasLi = Object.prototype.hasOwnProperty.call(r, "lowerInclusive");
+  const hasUi = Object.prototype.hasOwnProperty.call(r, "upperInclusive");
+  if (!hasLower || !hasUpper || !hasLi || !hasUi) {
+    throw new Error(`Invalid range for ${context}. Required properties: lower, upper, lowerInclusive, upperInclusive`);
+  }
+  if (typeof r.lowerInclusive !== "boolean" || typeof r.upperInclusive !== "boolean") {
+    throw new Error(`Invalid range for ${context}. lowerInclusive and upperInclusive must be boolean`);
+  }
+  const inner = expectedRangeInnerKind(col._typname);
+  if (inner === "number") {
+    if (typeof r.lower !== "number" || !Number.isFinite(r.lower as number)) {
+      throw new Error(`Invalid range.lower for ${context}. Expected number for type ${col._typname}`);
+    }
+    if (typeof r.upper !== "number" || !Number.isFinite(r.upper as number)) {
+      throw new Error(`Invalid range.upper for ${context}. Expected number for type ${col._typname}`);
+    }
+  } else if (inner === "string") {
+    if (typeof r.lower !== "string") {
+      throw new Error(`Invalid range.lower for ${context}. Expected string for type ${col._typname}`);
+    }
+    if (typeof r.upper !== "string") {
+      throw new Error(`Invalid range.upper for ${context}. Expected string for type ${col._typname}`);
+    }
+  } else {
+    // Unknown inner kind; best-effort: accept as-is
+  }
 }
 
 function isValidJsonLike(value: unknown): boolean {
@@ -209,6 +268,10 @@ function validateScalarForColumn(col: ColumnDef, value: unknown, context: string
     if (!isValidJsonLike(value)) {
       throw new Error(`Invalid value for ${context}. Expected JSON-compatible value for type ${col._typname}`);
     }
+    return;
+  }
+  if (kind === "range") {
+    validateRangeForColumn(col, value, context);
     return;
   }
 }
