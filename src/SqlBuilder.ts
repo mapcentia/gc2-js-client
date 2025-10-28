@@ -280,6 +280,7 @@ export interface TableQuery<S extends DBSchema, TN extends string> {
 }
 
 export interface SelectQuery<S extends DBSchema, TN extends string> {
+  selectFrom: <JT extends AllowedJoinTables<S, TN>>(table: JT, cols?: ReadonlyArray<ColumnNames<S, JT>>) => SelectQuery<S, TN>;
   andWhere: (where: WhereForTable<S, TN>) => SelectQuery<S, TN>;
   /** @deprecated Use andWhere() instead */
   where: (where: WhereForTable<S, TN>) => SelectQuery<S, TN>;
@@ -322,7 +323,7 @@ class TableQueryImpl<S extends DBSchema, TN extends string> implements TableQuer
     this.table = findTable(schema, tableName);
   }
 
-  select(cols?: ColumnNames<S, TN>[]): SelectQuery<S, TN> {
+  select(cols?: ReadonlyArray<ColumnNames<S, TN>>): SelectQuery<S, TN> {
     const table = this.table;
     const schema = this.schema;
     const selected = (cols && cols.length ? cols : ["*"]) as (ColumnNames<S, TN> | "*")[];
@@ -338,24 +339,51 @@ class TableQueryImpl<S extends DBSchema, TN extends string> implements TableQuer
       limit: undefined as number | undefined,
       offset: undefined as number | undefined,
       joins: [] as { type: "inner" | "left" | "right" | "full"; target: TableDef; on: { left: string; right: string }[] }[],
+      joinSelections: [] as { target: TableDef; selected: (string | "*")[] }[],
     };
 
     return new (class implements SelectQuery<S, TN> {
       private s = state;
 
-      andWhere = (w: WhereForTable<S, TN>) => {
-        // merge
-        for (const k in w as Record<string, unknown>) this.s.where[k as keyof typeof w] = (w as any)[k];
+      selectFrom<JT extends AllowedJoinTables<S, TN>>(tableName: JT, cols?: ReadonlyArray<ColumnNames<S, JT>>): SelectQuery<S, TN> {
+        const jtName = String(tableName);
+        const join = this.s.joins.find(j => j.target.name === jtName);
+        if (!join) {
+          throw new Error(`selectFrom('${jtName}') requires a prior join('${jtName}') call`);
+        }
+        const sel = (!cols || (cols as readonly any[]).length === 0) ? ["*"] : (cols as readonly any[]).map(String);
+        if (!(sel.length === 1 && sel[0] === "*")) {
+          for (const c of sel) findColumn(join.target, String(c));
+        }
+        const existing = this.s.joinSelections.find(js => js.target.name === jtName);
+        if (existing) {
+          if (existing.selected.includes("*")) return this;
+          if (sel.length === 1 && sel[0] === "*") {
+            existing.selected = ["*"];
+          } else {
+            const set = new Set(existing.selected as string[]);
+            for (const c of sel) set.add(String(c));
+            existing.selected = Array.from(set);
+          }
+        } else {
+          this.s.joinSelections.push({ target: join.target, selected: sel as (string | "*")[] });
+        }
         return this;
-      };
-      /** @deprecated Use andWhere() instead */
-      where = (w: WhereForTable<S, TN>) => this.andWhere(w);
+      }
 
-      orWhere = (w: WhereForTable<S, TN>) => {
-        // push a new OR group
-        this.s.orWhereGroups.push(w);
+      andWhere(where: WhereForTable<S, TN>): SelectQuery<S, TN> {
+        // merge
+        for (const k in where as Record<string, unknown>) this.s.where[k as keyof typeof where] = (where as any)[k];
         return this;
-      };
+      }
+      /** @deprecated Use andWhere() instead */
+      where(where: WhereForTable<S, TN>): SelectQuery<S, TN> { return this.andWhere(where); }
+
+      orWhere(where: WhereForTable<S, TN>): SelectQuery<S, TN> {
+        // push a new OR group
+        this.s.orWhereGroups.push(where);
+        return this;
+      }
 
       andWhereOp<K extends ColumnNames<S, TN>, O extends WhereOperator>(col: K, op: O, ...args: OpArgsFor<S, TN, K, O>): SelectQuery<S, TN>;
       andWhereOp(col: any, op: any, ...args: any[]): SelectQuery<S, TN> {
@@ -369,20 +397,18 @@ class TableQueryImpl<S extends DBSchema, TN extends string> implements TableQuer
         this.s.orOpGroups.push([{ col, op, value }]);
         return this;
       }
-      andWhereOpGroup: SelectQuery<S, TN>["andWhereOpGroup"] = (predicates) => {
+      andWhereOpGroup(predicates: ReadonlyArray<OpPredicate<S, TN>>): SelectQuery<S, TN> {
         const group = (predicates as ReadonlyArray<readonly [ColumnNames<S, TN>, WhereOperator, unknown?]>).map(p => ({ col: p[0], op: p[1], value: p[2] }));
         for (const g of group) this.s.andOps.push(g);
         return this;
-      };
-      orWhereOpGroup: SelectQuery<S, TN>["orWhereOpGroup"] = (predicates) => {
+      }
+      orWhereOpGroup(predicates: ReadonlyArray<OpPredicate<S, TN>>): SelectQuery<S, TN> {
         const group = (predicates as ReadonlyArray<readonly [ColumnNames<S, TN>, WhereOperator, unknown?]>).map(p => ({ col: p[0], op: p[1], value: p[2] }));
         this.s.orOpGroups.push(group);
         return this;
-      };
+      }
 
-      orderBy = (
-        order: (readonly [ColumnNames<S, TN>, "asc" | "desc"])[] | ColumnNames<S, TN>
-      ) => {
+      orderBy(order: ReadonlyArray<readonly [ColumnNames<S, TN>, "asc" | "desc"]> | ColumnNames<S, TN>): SelectQuery<S, TN> {
         this.s.order = [];
         const isValidDir = (d: string): d is "asc" | "desc" => d === "asc" || d === "desc";
         if (typeof order === "string") {
@@ -403,26 +429,26 @@ class TableQueryImpl<S extends DBSchema, TN extends string> implements TableQuer
           }
         }
         return this;
-      };
+      }
 
-      limit = (n: number) => {
+      limit(n: number): SelectQuery<S, TN> {
         // Runtime validation: limit must be a non-negative integer
         if (typeof n !== "number" || !Number.isFinite(n) || !Number.isInteger(n) || n < 0) {
           throw new Error(`Invalid limit: ${n}. Limit must be a non-negative integer`);
         }
         this.s.limit = n;
         return this;
-      };
-      offset = (n: number) => {
+      }
+      offset(n: number): SelectQuery<S, TN> {
         // Runtime validation: offset must be a non-negative integer
         if (typeof n !== "number" || !Number.isFinite(n) || !Number.isInteger(n) || n < 0) {
           throw new Error(`Invalid offset: ${n}. Offset must be a non-negative integer`);
         }
         this.s.offset = n;
         return this;
-      };
+      }
 
-      join = <JT extends AllowedJoinTables<S, TN>>(tableName: JT, type: "inner" | "left" | "right" | "full" = "inner") => {
+      join<JT extends AllowedJoinTables<S, TN>>(tableName: JT, type: "inner" | "left" | "right" | "full" = "inner"): SelectQuery<S, TN> {
         const target = findTable(schema, String(tableName));
         const pairs = findJoinOn(table, target);
         if (!pairs || !pairs.length) throw new Error(`No foreign key relation found between ${table.name} and ${target.name}`);
@@ -433,7 +459,7 @@ class TableQueryImpl<S extends DBSchema, TN extends string> implements TableQuer
         }
         this.s.joins.push({ type: jt as any, target, on: pairs });
         return this;
-      };
+      }
 
       toSql = (): SqlRequest => {
         const params: Record<string, unknown> = {};
@@ -442,9 +468,9 @@ class TableQueryImpl<S extends DBSchema, TN extends string> implements TableQuer
 
         const parts: string[] = [];
         // Columns
-        let colsSql: string;
+        const selectParts: string[] = [];
         if (selected.length === 1 && selected[0] === "*") {
-          colsSql = `"${table.name}".*`;
+          selectParts.push(`"${table.name}".*`);
         } else {
           // Runtime validation: ensure every selected column exists on the table
           const sel = selected as string[];
@@ -452,9 +478,19 @@ class TableQueryImpl<S extends DBSchema, TN extends string> implements TableQuer
             // will throw if column not found
             findColumn(table, String(c));
           }
-          colsSql = sel.map(c => `"${table.name}"."${c}"`).join(", ");
+          selectParts.push(sel.map(c => `"${table.name}"."${c}"`).join(", "));
         }
-        parts.push(`select ${colsSql} from "${table.name}"`);
+        // Joined table selections
+        for (const js of state.joinSelections) {
+          if (js.selected.length === 1 && js.selected[0] === "*") {
+            selectParts.push(`"${js.target.name}".*`);
+          } else {
+            const cols = js.selected as string[];
+            for (const c of cols) findColumn(js.target, String(c));
+            selectParts.push(cols.map(c => `"${js.target.name}"."${c}"`).join(", "));
+          }
+        }
+        parts.push(`select ${selectParts.join(", ")} from "${table.name}"`);
 
         // JOINs
         for (const j of state.joins) {

@@ -17,7 +17,8 @@ export default class Ws {
             if (this.options?.rel) {
                 queryString = queryString + `&rel=` + this.options.rel
             }
-            const ws = new this.options.wsClient(
+            const WSClass = this.options.wsClient as any;
+            const ws: WebSocket = new WSClass(
                 this.options.host + `/` + queryString,
             );
 
@@ -25,19 +26,19 @@ export default class Ws {
                 console.log('WebSocket connected!');
             };
 
-            ws.onmessage = function (event) {
+            ws.onmessage = function (event: MessageEvent) {
                 // Handle incoming messages
-                me.options.callBack(event.data)
+                me.options.callBack((event as any).data)
             };
 
-            ws.onclose = function (event) {
+            ws.onclose = function (event: CloseEvent) {
                 if (accessToken !== '') {
-                    console.log('WebSocket closed, reconnecting in 3 seconds...', event.reason);
+                    console.log('WebSocket closed, reconnecting in 3 seconds...', (event as any).reason);
                     setTimeout(connect, 3000); // Try to reconnect
                 }
             };
 
-            ws.onerror = function (err) {
+            ws.onerror = function (err: Event) {
                 console.error('WebSocket error observed:', err);
                 // Close the socket on error to ensure clean reconnection
                 ws.close();
