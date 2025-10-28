@@ -118,6 +118,17 @@ export type OpPredicate<S extends DBSchema, TN extends string> = {
   [K in ColumnNames<S, TN>]: OpPredicateForCol<S, TN, K>
 }[ColumnNames<S, TN>];
 
+// Additional type helpers
+export type IsAny<T> = 0 extends (1 & T) ? true : false;
+
+export type OpArgsFor<S extends DBSchema, TN extends string, K extends ColumnNames<S, TN>, O extends WhereOperator> =
+  IsAny<O> extends true ? never[] :
+  O extends "isnull" | "notnull" ? [] :
+  O extends "like" | "ilike" | "notlike" | "notilike" ? [value: string] :
+  O extends "in" | "notin" ? [value: ReadonlyArray<ColumnValueFor<S, TN, K>>] :
+  O extends "=" | "!=" | "<" | "<=" | ">" | ">=" ? [value: ColumnValueFor<S, TN, K>] :
+  never[];
+
 // ---------- Runtime helpers ----------
 function findTable(schema: DBSchema, name: string): TableDef {
   const tbl = schema.tables.find(t => t.name === name);
@@ -273,15 +284,9 @@ export interface SelectQuery<S extends DBSchema, TN extends string> {
   /** @deprecated Use andWhere() instead */
   where: (where: WhereForTable<S, TN>) => SelectQuery<S, TN>;
   orWhere: (where: WhereForTable<S, TN>) => SelectQuery<S, TN>;
-  // Operator-based where chaining with compile-time value checks (use method overloads for proper IntelliSense)
-  andWhereOp<K extends ColumnNames<S, TN>>(col: K, op: "isnull" | "notnull"): SelectQuery<S, TN>;
-  andWhereOp<K extends ColumnNames<S, TN>>(col: K, op: "like" | "ilike" | "notlike" | "notilike", value: string): SelectQuery<S, TN>;
-  andWhereOp<K extends ColumnNames<S, TN>>(col: K, op: "in" | "notin", value: ReadonlyArray<ColumnValueFor<S, TN, K>>): SelectQuery<S, TN>;
-  andWhereOp<K extends ColumnNames<S, TN>>(col: K, op: "=" | "!=" | "<" | "<=" | ">" | ">=", value: ColumnValueFor<S, TN, K>): SelectQuery<S, TN>;
-  orWhereOp<K extends ColumnNames<S, TN>>(col: K, op: "isnull" | "notnull"): SelectQuery<S, TN>;
-  orWhereOp<K extends ColumnNames<S, TN>>(col: K, op: "like" | "ilike" | "notlike" | "notilike", value: string): SelectQuery<S, TN>;
-  orWhereOp<K extends ColumnNames<S, TN>>(col: K, op: "in" | "notin", value: ReadonlyArray<ColumnValueFor<S, TN, K>>): SelectQuery<S, TN>;
-  orWhereOp<K extends ColumnNames<S, TN>>(col: K, op: "=" | "!=" | "<" | "<=" | ">" | ">=", value: ColumnValueFor<S, TN, K>): SelectQuery<S, TN>;
+  // Operator-based where chaining with compile-time value checks; also rejects `any` operator by disallowing extra args when O is any
+  andWhereOp<K extends ColumnNames<S, TN>, O extends WhereOperator>(col: K, op: O, ...args: OpArgsFor<S, TN, K, O>): SelectQuery<S, TN>;
+  orWhereOp<K extends ColumnNames<S, TN>, O extends WhereOperator>(col: K, op: O, ...args: OpArgsFor<S, TN, K, O>): SelectQuery<S, TN>;
   andWhereOpGroup: (predicates: ReadonlyArray<OpPredicate<S, TN>>) => SelectQuery<S, TN>;
   orWhereOpGroup: (predicates: ReadonlyArray<OpPredicate<S, TN>>) => SelectQuery<S, TN>;
   orderBy: (order: ReadonlyArray<readonly [ColumnNames<S, TN>, "asc" | "desc"]> | ColumnNames<S, TN>) => SelectQuery<S, TN>;
@@ -352,19 +357,15 @@ class TableQueryImpl<S extends DBSchema, TN extends string> implements TableQuer
         return this;
       };
 
-      andWhereOp<K extends ColumnNames<S, TN>>(col: K, op: "isnull" | "notnull"): SelectQuery<S, TN>;
-      andWhereOp<K extends ColumnNames<S, TN>>(col: K, op: "like" | "ilike" | "notlike" | "notilike", value: string): SelectQuery<S, TN>;
-      andWhereOp<K extends ColumnNames<S, TN>>(col: K, op: "in" | "notin", value: ReadonlyArray<ColumnValueFor<S, TN, K>>): SelectQuery<S, TN>;
-      andWhereOp<K extends ColumnNames<S, TN>>(col: K, op: "=" | "!=" | "<" | "<=" | ">" | ">=", value: ColumnValueFor<S, TN, K>): SelectQuery<S, TN>;
-      andWhereOp(col: any, op: any, value?: any): SelectQuery<S, TN> {
+      andWhereOp<K extends ColumnNames<S, TN>, O extends WhereOperator>(col: K, op: O, ...args: OpArgsFor<S, TN, K, O>): SelectQuery<S, TN>;
+      andWhereOp(col: any, op: any, ...args: any[]): SelectQuery<S, TN> {
+        const value = args[0];
         this.s.andOps.push({ col, op, value });
         return this;
       }
-      orWhereOp<K extends ColumnNames<S, TN>>(col: K, op: "isnull" | "notnull"): SelectQuery<S, TN>;
-      orWhereOp<K extends ColumnNames<S, TN>>(col: K, op: "like" | "ilike" | "notlike" | "notilike", value: string): SelectQuery<S, TN>;
-      orWhereOp<K extends ColumnNames<S, TN>>(col: K, op: "in" | "notin", value: ReadonlyArray<ColumnValueFor<S, TN, K>>): SelectQuery<S, TN>;
-      orWhereOp<K extends ColumnNames<S, TN>>(col: K, op: "=" | "!=" | "<" | "<=" | ">" | ">=", value: ColumnValueFor<S, TN, K>): SelectQuery<S, TN>;
-      orWhereOp(col: any, op: any, value?: any): SelectQuery<S, TN> {
+      orWhereOp<K extends ColumnNames<S, TN>, O extends WhereOperator>(col: K, op: O, ...args: OpArgsFor<S, TN, K, O>): SelectQuery<S, TN>;
+      orWhereOp(col: any, op: any, ...args: any[]): SelectQuery<S, TN> {
+        const value = args[0];
         this.s.orOpGroups.push([{ col, op, value }]);
         return this;
       }
