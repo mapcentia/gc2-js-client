@@ -10,10 +10,19 @@ export interface ColumnDef {
   type?: string; // e.g. character varying(255)
 }
 
+export interface ConstraintDef {
+  name: string;
+  constraint: "primary" | "foreign" | string;
+  columns: readonly string[];
+  referenced_table?: string;
+  referenced_columns?: readonly string[];
+}
+
 export interface TableDef {
   name: string;
   // Use readonly arrays so `as const` schemas preserve literal column names for typing
   columns: readonly ColumnDef[];
+  constraints?: readonly ConstraintDef[];
 }
 
 export interface DBSchema {
@@ -99,6 +108,26 @@ function addTypeHintForParam(
   }
 }
 
+// Attempt to derive join ON pairs between two tables using foreign key constraints.
+function findJoinOn(base: TableDef, target: TableDef): { left: string; right: string }[] | null {
+  const bc = base.constraints || [];
+  const tc = target.constraints || [];
+
+  // Case 1: base has FK referencing target
+  for (const c of bc) {
+    if (c.constraint === "foreign" && c.referenced_table === target.name && c.columns?.length && c.referenced_columns?.length && c.columns.length === c.referenced_columns.length) {
+      return c.columns.map((col, i) => ({ left: String(col), right: String(c.referenced_columns![i]) }));
+    }
+  }
+  // Case 2: target has FK referencing base
+  for (const c of tc) {
+    if (c.constraint === "foreign" && c.referenced_table === base.name && c.columns?.length && c.referenced_columns?.length && c.columns.length === c.referenced_columns.length) {
+      return c.referenced_columns.map((rcol, i) => ({ left: String(rcol), right: String(c.columns![i]) }));
+    }
+  }
+  return null;
+}
+
 // ---------- Builders ----------
 export interface SqlBuilder<S extends DBSchema> {
   table: <TN extends TableNames<S>>(name: TN) => TableQuery<S, TN>;
@@ -120,6 +149,7 @@ export interface SelectQuery<S extends DBSchema, TN extends string> {
   orderBy: (order: ReadonlyArray<readonly [ColumnNames<S, TN>, "asc" | "desc"]> | ColumnNames<S, TN>) => SelectQuery<S, TN>;
   limit: (n: number) => SelectQuery<S, TN>;
   offset: (n: number) => SelectQuery<S, TN>;
+  join: <JT extends TableNames<S>>(table: JT, type?: "inner" | "left" | "right" | "full") => SelectQuery<S, TN>;
   toSql: () => SqlRequest<Record<string, unknown>>;
 }
 
@@ -151,6 +181,7 @@ class TableQueryImpl<S extends DBSchema, TN extends string> implements TableQuer
 
   select(cols?: ColumnNames<S, TN>[]): SelectQuery<S, TN> {
     const table = this.table;
+    const schema = this.schema;
     const selected = (cols && cols.length ? cols : ["*"]) as (ColumnNames<S, TN> | "*")[];
     const state = {
       table,
@@ -159,6 +190,7 @@ class TableQueryImpl<S extends DBSchema, TN extends string> implements TableQuer
       order: [] as { col: ColumnNames<S, TN>; dir: "asc" | "desc" }[],
       limit: undefined as number | undefined,
       offset: undefined as number | undefined,
+      joins: [] as { type: "inner" | "left" | "right" | "full"; target: TableDef; on: { left: string; right: string }[] }[],
     };
 
     return new (class implements SelectQuery<S, TN> {
@@ -185,14 +217,34 @@ class TableQueryImpl<S extends DBSchema, TN extends string> implements TableQuer
       limit = (n: number) => { this.s.limit = n; return this; };
       offset = (n: number) => { this.s.offset = n; return this; };
 
+      join = <JT extends TableNames<S>>(tableName: JT, type: "inner" | "left" | "right" | "full" = "inner") => {
+        const target = findTable(schema, String(tableName));
+        const pairs = findJoinOn(table, target);
+        if (!pairs || !pairs.length) throw new Error(`No foreign key relation found between ${table.name} and ${target.name}`);
+        this.s.joins.push({ type, target, on: pairs });
+        return this;
+      };
+
       toSql = (): SqlRequest => {
         const params: Record<string, unknown> = {};
         const type_hints: Record<string, string> = {};
         let p = 0;
 
         const parts: string[] = [];
-        const colsSql = selected.join(", ");
+        // Columns
+        let colsSql: string;
+        if (selected.length === 1 && selected[0] === "*") {
+          colsSql = `"${table.name}".*`;
+        } else {
+          colsSql = (selected as string[]).map(c => `"${table.name}"."${c}"`).join(", ");
+        }
         parts.push(`select ${colsSql} from "${table.name}"`);
+
+        // JOINs
+        for (const j of state.joins) {
+          const onExpr = j.on.map(p => `"${table.name}"."${p.left}" = "${j.target.name}"."${p.right}"`).join(" and ");
+          parts.push(`${j.type} join "${j.target.name}" on ${onExpr}`);
+        }
 
         const whereClauses: string[] = [];
         for (const key in state.where) {
@@ -202,14 +254,14 @@ class TableQueryImpl<S extends DBSchema, TN extends string> implements TableQuer
           const paramName = `${table.name}_${key}_${p}`;
 
           if (value === null) {
-            whereClauses.push(`"${key}" is null`);
+            whereClauses.push(`"${table.name}"."${key}" is null`);
           } else if (Array.isArray(value)) {
             // IN via = ANY(:param)
-            whereClauses.push(`"${key}" = ANY(:${paramName})`);
+            whereClauses.push(`"${table.name}"."${key}" = ANY(:${paramName})`);
             params[paramName] = value;
             addTypeHintForParam(type_hints, paramName, col, value);
           } else {
-            whereClauses.push(`"${key}" = :${paramName}`);
+            whereClauses.push(`"${table.name}"."${key}" = :${paramName}`);
             params[paramName] = value;
             addTypeHintForParam(type_hints, paramName, col, value);
           }
@@ -218,7 +270,7 @@ class TableQueryImpl<S extends DBSchema, TN extends string> implements TableQuer
 
         if (state.order.length) {
           const orders: string[] = [];
-          for (const o of state.order) orders.push(`"${o.col}" ${o.dir}`);
+          for (const o of state.order) orders.push(`"${table.name}"."${o.col}" ${o.dir}`);
           parts.push("order by " + orders.join(", "));
         }
         if (state.limit !== undefined) parts.push("limit " + state.limit);
