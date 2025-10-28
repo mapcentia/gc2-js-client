@@ -75,6 +75,10 @@ export type ColumnValueFromDef<C extends ColumnDef> =
 export type NullableColumnValueFromDef<C extends ColumnDef> =
   C["is_nullable"] extends true ? ColumnValueFromDef<C> | null : ColumnValueFromDef<C>;
 
+// Helpers to map a column name to its definition and value type
+export type ColumnDefByName<S extends DBSchema, TN extends string, K extends string> = Extract<ColumnsOf<S, TN>[number], { name: K }>;
+export type ColumnValueFor<S extends DBSchema, TN extends string, K extends string> = NullableColumnValueFromDef<ColumnDefByName<S, TN, K>>;
+
 export type ValuesForTable<S extends DBSchema, TN extends string> = Partial<{
   [K in ColumnNames<S, TN>]: NullableColumnValueFromDef<Extract<ColumnsOf<S, TN>[number], { name: K }>>
 }>;
@@ -102,6 +106,17 @@ export type WhereOperator =
   | "notin"
   | "isnull"
   | "notnull";
+
+// Typed operator predicate for group APIs (compile-time value checks per operator)
+export type OpPredicateForCol<S extends DBSchema, TN extends string, K extends ColumnNames<S, TN>> =
+  | readonly [K, "isnull" | "notnull"]
+  | readonly [K, "like" | "ilike" | "notlike" | "notilike", string]
+  | readonly [K, "in" | "notin", ReadonlyArray<ColumnValueFor<S, TN, K>>]
+  | readonly [K, "=" | "!=" | "<" | "<=" | ">" | ">=", ColumnValueFor<S, TN, K>];
+
+export type OpPredicate<S extends DBSchema, TN extends string> = {
+  [K in ColumnNames<S, TN>]: OpPredicateForCol<S, TN, K>
+}[ColumnNames<S, TN>];
 
 // ---------- Runtime helpers ----------
 function findTable(schema: DBSchema, name: string): TableDef {
@@ -134,6 +149,86 @@ function addTypeHintForParam(
   if (isArr) {
     const hint = typeNameToHint(col._typname, true);
     if (hint) typeHints[paramName] = hint;
+  }
+}
+
+// Runtime value type validation helpers for whereOp predicates
+function expectedScalarKind(typname: string): "number" | "string" | "boolean" | "json" | "unknown" {
+  const t = typname.toLowerCase();
+  if (t === "int2" || t === "int4" || t === "int8" || t === "float4" || t === "float8") return "number";
+  if (t === "numeric" || t === "decimal") return "string"; // numeric represented as string in SDK
+  if (t === "varchar" || t === "text" || t === "bpchar" || t === "char" || t === "date" || t === "time" || t === "timetz" || t === "timestamp" || t === "timestamptz") return "string";
+  if (t === "bool") return "boolean";
+  if (t === "json" || t === "jsonb") return "json";
+  return "unknown";
+}
+
+function isValidJsonLike(value: unknown): boolean {
+  return (
+    value === null ||
+    typeof value === "string" ||
+    typeof value === "number" ||
+    typeof value === "boolean" ||
+    (typeof value === "object" && value !== null)
+  );
+}
+
+function validateScalarForColumn(col: ColumnDef, value: unknown, context: string): void {
+  const kind = expectedScalarKind(col._typname);
+  if (kind === "unknown") return; // best-effort: skip strict check for unknown types
+  if (kind === "number") {
+    if (typeof value !== "number" || !Number.isFinite(value)) {
+      throw new Error(`Invalid value for ${context}. Expected number for type ${col._typname}, got ${typeof value}`);
+    }
+    return;
+  }
+  if (kind === "string") {
+    if (typeof value !== "string") {
+      throw new Error(`Invalid value for ${context}. Expected string for type ${col._typname}, got ${typeof value}`);
+    }
+    return;
+  }
+  if (kind === "boolean") {
+    if (typeof value !== "boolean") {
+      throw new Error(`Invalid value for ${context}. Expected boolean for type ${col._typname}, got ${typeof value}`);
+    }
+    return;
+  }
+  if (kind === "json") {
+    if (!isValidJsonLike(value)) {
+      throw new Error(`Invalid value for ${context}. Expected JSON-compatible value for type ${col._typname}`);
+    }
+    return;
+  }
+}
+
+function validateComparisonValue(col: ColumnDef, key: string, value: unknown, op: string): void {
+  if (value === undefined || value === null) {
+    throw new Error(`Operator ${op} on column ${key} requires a non-null value. Use isnull/notnull for null checks.`);
+  }
+  if (col._is_array) {
+    if (!Array.isArray(value)) {
+      throw new Error(`Operator ${op} on array column ${key} requires an array value`);
+    }
+    for (const [i, v] of (value as unknown[]).entries()) {
+      validateScalarForColumn(col, v, `column ${key}[${i}]`);
+    }
+  } else {
+    if (Array.isArray(value)) {
+      throw new Error(`Operator ${op} on scalar column ${key} cannot accept an array value`);
+    }
+    validateScalarForColumn(col, value, `column ${key}`);
+  }
+}
+
+function validateInArrayValues(col: ColumnDef, key: string, values: unknown[], op: string): void {
+  // For scalar columns ensure each element matches the scalar type. For array-typed columns, we only ensure it's an array of anything (Postgres may accept array of arrays); keep minimal.
+  if (!col._is_array) {
+    let idx = 0;
+    for (const v of values) {
+      validateScalarForColumn(col, v, `column ${key} (element ${idx})`);
+      idx++;
+    }
   }
 }
 
@@ -178,10 +273,17 @@ export interface SelectQuery<S extends DBSchema, TN extends string> {
   /** @deprecated Use andWhere() instead */
   where: (where: WhereForTable<S, TN>) => SelectQuery<S, TN>;
   orWhere: (where: WhereForTable<S, TN>) => SelectQuery<S, TN>;
-  // Operator-based where chaining
-  andWhereOp: <K extends ColumnNames<S, TN>>(col: K, op: WhereOperator, value?: unknown) => SelectQuery<S, TN>;
-  orWhereOp:  <K extends ColumnNames<S, TN>>(col: K, op: WhereOperator, value?: unknown) => SelectQuery<S, TN>;
-  orWhereOpGroup: (predicates: ReadonlyArray<readonly [ColumnNames<S, TN>, WhereOperator, unknown?]>) => SelectQuery<S, TN>;
+  // Operator-based where chaining with compile-time value checks (use method overloads for proper IntelliSense)
+  andWhereOp<K extends ColumnNames<S, TN>>(col: K, op: "isnull" | "notnull"): SelectQuery<S, TN>;
+  andWhereOp<K extends ColumnNames<S, TN>>(col: K, op: "like" | "ilike" | "notlike" | "notilike", value: string): SelectQuery<S, TN>;
+  andWhereOp<K extends ColumnNames<S, TN>>(col: K, op: "in" | "notin", value: ReadonlyArray<ColumnValueFor<S, TN, K>>): SelectQuery<S, TN>;
+  andWhereOp<K extends ColumnNames<S, TN>>(col: K, op: "=" | "!=" | "<" | "<=" | ">" | ">=", value: ColumnValueFor<S, TN, K>): SelectQuery<S, TN>;
+  orWhereOp<K extends ColumnNames<S, TN>>(col: K, op: "isnull" | "notnull"): SelectQuery<S, TN>;
+  orWhereOp<K extends ColumnNames<S, TN>>(col: K, op: "like" | "ilike" | "notlike" | "notilike", value: string): SelectQuery<S, TN>;
+  orWhereOp<K extends ColumnNames<S, TN>>(col: K, op: "in" | "notin", value: ReadonlyArray<ColumnValueFor<S, TN, K>>): SelectQuery<S, TN>;
+  orWhereOp<K extends ColumnNames<S, TN>>(col: K, op: "=" | "!=" | "<" | "<=" | ">" | ">=", value: ColumnValueFor<S, TN, K>): SelectQuery<S, TN>;
+  andWhereOpGroup: (predicates: ReadonlyArray<OpPredicate<S, TN>>) => SelectQuery<S, TN>;
+  orWhereOpGroup: (predicates: ReadonlyArray<OpPredicate<S, TN>>) => SelectQuery<S, TN>;
   orderBy: (order: ReadonlyArray<readonly [ColumnNames<S, TN>, "asc" | "desc"]> | ColumnNames<S, TN>) => SelectQuery<S, TN>;
   limit: (n: number) => SelectQuery<S, TN>;
   offset: (n: number) => SelectQuery<S, TN>;
@@ -250,16 +352,29 @@ class TableQueryImpl<S extends DBSchema, TN extends string> implements TableQuer
         return this;
       };
 
-      andWhereOp = <K extends ColumnNames<S, TN>>(col: K, op: WhereOperator, value?: unknown) => {
+      andWhereOp<K extends ColumnNames<S, TN>>(col: K, op: "isnull" | "notnull"): SelectQuery<S, TN>;
+      andWhereOp<K extends ColumnNames<S, TN>>(col: K, op: "like" | "ilike" | "notlike" | "notilike", value: string): SelectQuery<S, TN>;
+      andWhereOp<K extends ColumnNames<S, TN>>(col: K, op: "in" | "notin", value: ReadonlyArray<ColumnValueFor<S, TN, K>>): SelectQuery<S, TN>;
+      andWhereOp<K extends ColumnNames<S, TN>>(col: K, op: "=" | "!=" | "<" | "<=" | ">" | ">=", value: ColumnValueFor<S, TN, K>): SelectQuery<S, TN>;
+      andWhereOp(col: any, op: any, value?: any): SelectQuery<S, TN> {
         this.s.andOps.push({ col, op, value });
         return this;
-      };
-      orWhereOp = <K extends ColumnNames<S, TN>>(col: K, op: WhereOperator, value?: unknown) => {
+      }
+      orWhereOp<K extends ColumnNames<S, TN>>(col: K, op: "isnull" | "notnull"): SelectQuery<S, TN>;
+      orWhereOp<K extends ColumnNames<S, TN>>(col: K, op: "like" | "ilike" | "notlike" | "notilike", value: string): SelectQuery<S, TN>;
+      orWhereOp<K extends ColumnNames<S, TN>>(col: K, op: "in" | "notin", value: ReadonlyArray<ColumnValueFor<S, TN, K>>): SelectQuery<S, TN>;
+      orWhereOp<K extends ColumnNames<S, TN>>(col: K, op: "=" | "!=" | "<" | "<=" | ">" | ">=", value: ColumnValueFor<S, TN, K>): SelectQuery<S, TN>;
+      orWhereOp(col: any, op: any, value?: any): SelectQuery<S, TN> {
         this.s.orOpGroups.push([{ col, op, value }]);
         return this;
+      }
+      andWhereOpGroup: SelectQuery<S, TN>["andWhereOpGroup"] = (predicates) => {
+        const group = (predicates as ReadonlyArray<readonly [ColumnNames<S, TN>, WhereOperator, unknown?]>).map(p => ({ col: p[0], op: p[1], value: p[2] }));
+        for (const g of group) this.s.andOps.push(g);
+        return this;
       };
-      orWhereOpGroup = (predicates: ReadonlyArray<readonly [ColumnNames<S, TN>, WhereOperator, unknown?]>) => {
-        const group = predicates.map(p => ({ col: p[0], op: p[1], value: p[2] }));
+      orWhereOpGroup: SelectQuery<S, TN>["orWhereOpGroup"] = (predicates) => {
+        const group = (predicates as ReadonlyArray<readonly [ColumnNames<S, TN>, WhereOperator, unknown?]>).map(p => ({ col: p[0], op: p[1], value: p[2] }));
         this.s.orOpGroups.push(group);
         return this;
       };
@@ -346,8 +461,15 @@ class TableQueryImpl<S extends DBSchema, TN extends string> implements TableQuer
           parts.push(`${j.type} join "${j.target.name}" on ${onExpr}`);
         }
 
-        const whereClauses: string[] = [];
-        // Base AND where
+        // Build WHERE with correct AND/OR semantics:
+        // - Collect base AND predicates (equality and operator-based) into one AND group
+        // - Collect OR groups (object-based and operator-based) as parenthesized groups
+        // - If any OR groups exist, top-level is: (AND-group) or (OR-group1) or (OR-group2) ...
+        // - Else, only the AND-group is used
+
+        const andParts: string[] = [];
+
+        // Base AND where (equality style)
         for (const key in state.where) {
           const value = (state.where as any)[key];
           const col = findColumn(table, key);
@@ -355,14 +477,18 @@ class TableQueryImpl<S extends DBSchema, TN extends string> implements TableQuer
           const paramName = `${table.name}_${key}_${p}`;
 
           if (value === null) {
-            whereClauses.push(`"${table.name}"."${key}" is null`);
+            andParts.push(`"${table.name}"."${key}" is null`);
           } else if (Array.isArray(value)) {
+            // Validate array element types (treat as IN semantics)
+            validateInArrayValues(col, key, value as unknown[], "in");
             // IN via = ANY(:param)
-            whereClauses.push(`"${table.name}"."${key}" = ANY(:${paramName})`);
+            andParts.push(`"${table.name}"."${key}" = ANY(:${paramName})`);
             params[paramName] = value;
             addTypeHintForParam(type_hints, paramName, col, value);
           } else {
-            whereClauses.push(`"${table.name}"."${key}" = :${paramName}`);
+            // Validate scalar matches column type
+            validateScalarForColumn(col, value, `column ${key}`);
+            andParts.push(`"${table.name}"."${key}" = :${paramName}`);
             params[paramName] = value;
             addTypeHintForParam(type_hints, paramName, col, value);
           }
@@ -377,15 +503,17 @@ class TableQueryImpl<S extends DBSchema, TN extends string> implements TableQuer
             if (pred.value !== undefined) {
               throw new Error(`Operator ${op} does not take a value for column ${key}`);
             }
-            whereClauses.push(`${qualified} is ${op === "isnull" ? "null" : "not null"}`);
+            andParts.push(`${qualified} is ${op === "isnull" ? "null" : "not null"}`);
           } else if (op === "in" || op === "notin") {
             const val = pred.value as unknown;
             if (!Array.isArray(val)) {
               throw new Error(`Operator ${op} requires an array value for column ${key}`);
             }
+            // Runtime validate each element type for scalar columns
+            validateInArrayValues(col, key, val as unknown[], op);
             p += 1;
             const paramName = `${table.name}_${key}_${p}`;
-            whereClauses.push(`${qualified} ${op === "in" ? "= ANY" : "!= ALL"}(:${paramName})`);
+            andParts.push(`${qualified} ${op === "in" ? "= ANY" : "!= ALL"}(:${paramName})`);
             params[paramName] = val;
             addTypeHintForParam(type_hints, paramName, col, val);
           } else if (op === "like" || op === "ilike" || op === "notlike" || op === "notilike") {
@@ -396,20 +524,22 @@ class TableQueryImpl<S extends DBSchema, TN extends string> implements TableQuer
             p += 1;
             const paramName = `${table.name}_${key}_${p}`;
             const sqlOp = op === "like" ? "like" : op === "ilike" ? "ilike" : op === "notlike" ? "not like" : "not ilike";
-            whereClauses.push(`${qualified} ${sqlOp} :${paramName}`);
+            andParts.push(`${qualified} ${sqlOp} :${paramName}`);
             params[paramName] = val;
           } else {
             // comparison or equality/inequality
             const val = pred.value as unknown;
             if (val === undefined) throw new Error(`Operator ${op} requires a value for column ${key}`);
+            // Runtime type validation against column type
+            validateComparisonValue(col, key, val, op);
             p += 1;
             const paramName = `${table.name}_${key}_${p}`;
             if (op === "=") {
-              whereClauses.push(`${qualified} = :${paramName}`);
+              andParts.push(`${qualified} = :${paramName}`);
             } else if (op === "!=") {
-              whereClauses.push(`${qualified} <> :${paramName}`);
+              andParts.push(`${qualified} <> :${paramName}`);
             } else if (op === "<" || op === "<=" || op === ">" || op === ">=") {
-              whereClauses.push(`${qualified} ${op} :${paramName}`);
+              andParts.push(`${qualified} ${op} :${paramName}`);
             } else {
               throw new Error(`Unsupported operator: ${op}`);
             }
@@ -417,7 +547,9 @@ class TableQueryImpl<S extends DBSchema, TN extends string> implements TableQuer
             addTypeHintForParam(type_hints, paramName, col, val);
           }
         }
-        // OR groups, each becomes a parenthesized OR chain and ANDed with others
+
+        // Build OR groups from object-based orWhere
+        const orGroupSql: string[] = [];
         for (const group of state.orWhereGroups) {
           const orParts: string[] = [];
           for (const key in group as Record<string, unknown>) {
@@ -428,18 +560,22 @@ class TableQueryImpl<S extends DBSchema, TN extends string> implements TableQuer
             if (value === null) {
               orParts.push(`"${table.name}"."${key}" is null`);
             } else if (Array.isArray(value)) {
+              // Validate array element types (treat as IN semantics)
+              validateInArrayValues(col, key, value as unknown[], "in");
               orParts.push(`"${table.name}"."${key}" = ANY(:${paramName})`);
               params[paramName] = value;
               addTypeHintForParam(type_hints, paramName, col, value);
             } else {
+              // Validate scalar matches column type
+              validateScalarForColumn(col, value, `column ${key}`);
               orParts.push(`"${table.name}"."${key}" = :${paramName}`);
               params[paramName] = value;
               addTypeHintForParam(type_hints, paramName, col, value);
             }
           }
-          if (orParts.length) whereClauses.push("(" + orParts.join(" or ") + ")");
+          if (orParts.length) orGroupSql.push("(" + orParts.join(" or ") + ")");
         }
-        // OR op groups (each group is OR between its predicates)
+        // Build OR groups from operator-based orWhereOp groups
         for (const group of state.orOpGroups) {
           const orParts: string[] = [];
           for (const pred of group) {
@@ -453,6 +589,8 @@ class TableQueryImpl<S extends DBSchema, TN extends string> implements TableQuer
             } else if (op === "in" || op === "notin") {
               const val = pred.value as unknown;
               if (!Array.isArray(val)) throw new Error(`Operator ${op} requires an array value for column ${key}`);
+              // Runtime validate each element type for scalar columns
+              validateInArrayValues(col, key, val as unknown[], op);
               p += 1;
               const paramName = `${table.name}_${key}_${p}`;
               orParts.push(`${qualified} ${op === "in" ? "= ANY" : "!= ALL"}(:${paramName})`);
@@ -469,6 +607,8 @@ class TableQueryImpl<S extends DBSchema, TN extends string> implements TableQuer
             } else {
               const val = pred.value as unknown;
               if (val === undefined) throw new Error(`Operator ${op} requires a value for column ${key}`);
+              // Runtime type validation against column type
+              validateComparisonValue(col, key, val, op);
               p += 1;
               const paramName = `${table.name}_${key}_${p}`;
               if (op === "=") {
@@ -484,9 +624,18 @@ class TableQueryImpl<S extends DBSchema, TN extends string> implements TableQuer
               addTypeHintForParam(type_hints, paramName, col, val);
             }
           }
-          if (orParts.length) whereClauses.push("(" + orParts.join(" or ") + ")");
+          if (orParts.length) orGroupSql.push("(" + orParts.join(" or ") + ")");
         }
-        if (whereClauses.length) parts.push("where " + whereClauses.join(" and "));
+
+        // Compose final WHERE
+        if (orGroupSql.length) {
+          const andSql = andParts.length ? `(${andParts.join(" and ")})` : "";
+          const orSql = orGroupSql.join(" or ");
+          const full = andSql ? `${andSql} or ${orSql}` : orSql;
+          if (full.trim().length) parts.push("where " + full);
+        } else if (andParts.length) {
+          parts.push("where " + andParts.join(" and "));
+        }
 
         if (state.order.length) {
           const orders: string[] = [];
