@@ -86,6 +86,23 @@ export type WhereForTable<S extends DBSchema, TN extends string> = Partial<{
     | NullableColumnValueFromDef<Extract<ColumnsOf<S, TN>[number], { name: K }>>[]
 }>;
 
+// Extended operator support for where-chaining
+export type WhereOperator =
+  | "="
+  | "!="
+  | "<"
+  | "<="
+  | ">"
+  | ">="
+  | "like"
+  | "ilike"
+  | "notlike"
+  | "notilike"
+  | "in"
+  | "notin"
+  | "isnull"
+  | "notnull";
+
 // ---------- Runtime helpers ----------
 function findTable(schema: DBSchema, name: string): TableDef {
   const tbl = schema.tables.find(t => t.name === name);
@@ -157,8 +174,14 @@ export interface TableQuery<S extends DBSchema, TN extends string> {
 }
 
 export interface SelectQuery<S extends DBSchema, TN extends string> {
+  andWhere: (where: WhereForTable<S, TN>) => SelectQuery<S, TN>;
+  /** @deprecated Use andWhere() instead */
   where: (where: WhereForTable<S, TN>) => SelectQuery<S, TN>;
   orWhere: (where: WhereForTable<S, TN>) => SelectQuery<S, TN>;
+  // Operator-based where chaining
+  andWhereOp: <K extends ColumnNames<S, TN>>(col: K, op: WhereOperator, value?: unknown) => SelectQuery<S, TN>;
+  orWhereOp:  <K extends ColumnNames<S, TN>>(col: K, op: WhereOperator, value?: unknown) => SelectQuery<S, TN>;
+  orWhereOpGroup: (predicates: ReadonlyArray<readonly [ColumnNames<S, TN>, WhereOperator, unknown?]>) => SelectQuery<S, TN>;
   orderBy: (order: ReadonlyArray<readonly [ColumnNames<S, TN>, "asc" | "desc"]> | ColumnNames<S, TN>) => SelectQuery<S, TN>;
   limit: (n: number) => SelectQuery<S, TN>;
   offset: (n: number) => SelectQuery<S, TN>;
@@ -201,6 +224,9 @@ class TableQueryImpl<S extends DBSchema, TN extends string> implements TableQuer
       selected,
       where: {} as WhereForTable<S, TN>,
       orWhereGroups: [] as WhereForTable<S, TN>[],
+      // Operator-based predicates
+      andOps: [] as { col: ColumnNames<S, TN>; op: WhereOperator; value?: unknown }[],
+      orOpGroups: [] as { col: ColumnNames<S, TN>; op: WhereOperator; value?: unknown }[][],
       order: [] as { col: ColumnNames<S, TN>; dir: "asc" | "desc" }[],
       limit: undefined as number | undefined,
       offset: undefined as number | undefined,
@@ -210,15 +236,31 @@ class TableQueryImpl<S extends DBSchema, TN extends string> implements TableQuer
     return new (class implements SelectQuery<S, TN> {
       private s = state;
 
-      where = (w: WhereForTable<S, TN>) => {
+      andWhere = (w: WhereForTable<S, TN>) => {
         // merge
         for (const k in w as Record<string, unknown>) this.s.where[k as keyof typeof w] = (w as any)[k];
         return this;
       };
+      /** @deprecated Use andWhere() instead */
+      where = (w: WhereForTable<S, TN>) => this.andWhere(w);
 
       orWhere = (w: WhereForTable<S, TN>) => {
         // push a new OR group
         this.s.orWhereGroups.push(w);
+        return this;
+      };
+
+      andWhereOp = <K extends ColumnNames<S, TN>>(col: K, op: WhereOperator, value?: unknown) => {
+        this.s.andOps.push({ col, op, value });
+        return this;
+      };
+      orWhereOp = <K extends ColumnNames<S, TN>>(col: K, op: WhereOperator, value?: unknown) => {
+        this.s.orOpGroups.push([{ col, op, value }]);
+        return this;
+      };
+      orWhereOpGroup = (predicates: ReadonlyArray<readonly [ColumnNames<S, TN>, WhereOperator, unknown?]>) => {
+        const group = predicates.map(p => ({ col: p[0], op: p[1], value: p[2] }));
+        this.s.orOpGroups.push(group);
         return this;
       };
 
@@ -325,6 +367,56 @@ class TableQueryImpl<S extends DBSchema, TN extends string> implements TableQuer
             addTypeHintForParam(type_hints, paramName, col, value);
           }
         }
+        // Operator-based AND predicates
+        for (const pred of state.andOps) {
+          const key = String(pred.col);
+          const op = String(pred.op) as WhereOperator;
+          const col = findColumn(table, key);
+          const qualified = `"${table.name}"."${key}"`;
+          if (op === "isnull" || op === "notnull") {
+            if (pred.value !== undefined) {
+              throw new Error(`Operator ${op} does not take a value for column ${key}`);
+            }
+            whereClauses.push(`${qualified} is ${op === "isnull" ? "null" : "not null"}`);
+          } else if (op === "in" || op === "notin") {
+            const val = pred.value as unknown;
+            if (!Array.isArray(val)) {
+              throw new Error(`Operator ${op} requires an array value for column ${key}`);
+            }
+            p += 1;
+            const paramName = `${table.name}_${key}_${p}`;
+            whereClauses.push(`${qualified} ${op === "in" ? "= ANY" : "!= ALL"}(:${paramName})`);
+            params[paramName] = val;
+            addTypeHintForParam(type_hints, paramName, col, val);
+          } else if (op === "like" || op === "ilike" || op === "notlike" || op === "notilike") {
+            const val = pred.value as unknown;
+            if (typeof val !== "string") {
+              throw new Error(`Operator ${op} requires a string value for column ${key}`);
+            }
+            p += 1;
+            const paramName = `${table.name}_${key}_${p}`;
+            const sqlOp = op === "like" ? "like" : op === "ilike" ? "ilike" : op === "notlike" ? "not like" : "not ilike";
+            whereClauses.push(`${qualified} ${sqlOp} :${paramName}`);
+            params[paramName] = val;
+          } else {
+            // comparison or equality/inequality
+            const val = pred.value as unknown;
+            if (val === undefined) throw new Error(`Operator ${op} requires a value for column ${key}`);
+            p += 1;
+            const paramName = `${table.name}_${key}_${p}`;
+            if (op === "=") {
+              whereClauses.push(`${qualified} = :${paramName}`);
+            } else if (op === "!=") {
+              whereClauses.push(`${qualified} <> :${paramName}`);
+            } else if (op === "<" || op === "<=" || op === ">" || op === ">=") {
+              whereClauses.push(`${qualified} ${op} :${paramName}`);
+            } else {
+              throw new Error(`Unsupported operator: ${op}`);
+            }
+            params[paramName] = val;
+            addTypeHintForParam(type_hints, paramName, col, val);
+          }
+        }
         // OR groups, each becomes a parenthesized OR chain and ANDed with others
         for (const group of state.orWhereGroups) {
           const orParts: string[] = [];
@@ -343,6 +435,53 @@ class TableQueryImpl<S extends DBSchema, TN extends string> implements TableQuer
               orParts.push(`"${table.name}"."${key}" = :${paramName}`);
               params[paramName] = value;
               addTypeHintForParam(type_hints, paramName, col, value);
+            }
+          }
+          if (orParts.length) whereClauses.push("(" + orParts.join(" or ") + ")");
+        }
+        // OR op groups (each group is OR between its predicates)
+        for (const group of state.orOpGroups) {
+          const orParts: string[] = [];
+          for (const pred of group) {
+            const key = String(pred.col);
+            const op = String(pred.op) as WhereOperator;
+            const col = findColumn(table, key);
+            const qualified = `"${table.name}"."${key}"`;
+            if (op === "isnull" || op === "notnull") {
+              if (pred.value !== undefined) throw new Error(`Operator ${op} does not take a value for column ${key}`);
+              orParts.push(`${qualified} is ${op === "isnull" ? "null" : "not null"}`);
+            } else if (op === "in" || op === "notin") {
+              const val = pred.value as unknown;
+              if (!Array.isArray(val)) throw new Error(`Operator ${op} requires an array value for column ${key}`);
+              p += 1;
+              const paramName = `${table.name}_${key}_${p}`;
+              orParts.push(`${qualified} ${op === "in" ? "= ANY" : "!= ALL"}(:${paramName})`);
+              params[paramName] = val;
+              addTypeHintForParam(type_hints, paramName, col, val);
+            } else if (op === "like" || op === "ilike" || op === "notlike" || op === "notilike") {
+              const val = pred.value as unknown;
+              if (typeof val !== "string") throw new Error(`Operator ${op} requires a string value for column ${key}`);
+              p += 1;
+              const paramName = `${table.name}_${key}_${p}`;
+              const sqlOp = op === "like" ? "like" : op === "ilike" ? "ilike" : op === "notlike" ? "not like" : "not ilike";
+              orParts.push(`${qualified} ${sqlOp} :${paramName}`);
+              params[paramName] = val;
+            } else {
+              const val = pred.value as unknown;
+              if (val === undefined) throw new Error(`Operator ${op} requires a value for column ${key}`);
+              p += 1;
+              const paramName = `${table.name}_${key}_${p}`;
+              if (op === "=") {
+                orParts.push(`${qualified} = :${paramName}`);
+              } else if (op === "!=") {
+                orParts.push(`${qualified} <> :${paramName}`);
+              } else if (op === "<" || op === "<=" || op === ">" || op === ">=") {
+                orParts.push(`${qualified} ${op} :${paramName}`);
+              } else {
+                throw new Error(`Unsupported operator: ${op}`);
+              }
+              params[paramName] = val;
+              addTypeHintForParam(type_hints, paramName, col, val);
             }
           }
           if (orParts.length) whereClauses.push("(" + orParts.join(" or ") + ")");
