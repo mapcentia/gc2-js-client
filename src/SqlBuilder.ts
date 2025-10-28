@@ -218,22 +218,54 @@ class TableQueryImpl<S extends DBSchema, TN extends string> implements TableQuer
         order: (readonly [ColumnNames<S, TN>, "asc" | "desc"])[] | ColumnNames<S, TN>
       ) => {
         this.s.order = [];
+        const isValidDir = (d: string): d is "asc" | "desc" => d === "asc" || d === "desc";
         if (typeof order === "string") {
+          // Runtime validation: ensure column exists
+          findColumn(table, String(order));
           this.s.order.push({ col: order as ColumnNames<S, TN>, dir: "asc" });
         } else {
-          for (const item of order) this.s.order.push({ col: item[0], dir: item[1] });
+          for (const item of order) {
+            const col = String(item[0]);
+            const dir = String(item[1]);
+            // Validate column exists on base table
+            findColumn(table, col);
+            // Validate direction
+            if (!isValidDir(dir)) {
+              throw new Error(`Invalid order direction: ${dir}. Allowed: asc | desc`);
+            }
+            this.s.order.push({ col: item[0], dir: dir });
+          }
         }
         return this;
       };
 
-      limit = (n: number) => { this.s.limit = n; return this; };
-      offset = (n: number) => { this.s.offset = n; return this; };
+      limit = (n: number) => {
+        // Runtime validation: limit must be a non-negative integer
+        if (typeof n !== "number" || !Number.isFinite(n) || !Number.isInteger(n) || n < 0) {
+          throw new Error(`Invalid limit: ${n}. Limit must be a non-negative integer`);
+        }
+        this.s.limit = n;
+        return this;
+      };
+      offset = (n: number) => {
+        // Runtime validation: offset must be a non-negative integer
+        if (typeof n !== "number" || !Number.isFinite(n) || !Number.isInteger(n) || n < 0) {
+          throw new Error(`Invalid offset: ${n}. Offset must be a non-negative integer`);
+        }
+        this.s.offset = n;
+        return this;
+      };
 
       join = <JT extends AllowedJoinTables<S, TN>>(tableName: JT, type: "inner" | "left" | "right" | "full" = "inner") => {
         const target = findTable(schema, String(tableName));
         const pairs = findJoinOn(table, target);
         if (!pairs || !pairs.length) throw new Error(`No foreign key relation found between ${table.name} and ${target.name}`);
-        this.s.joins.push({ type, target, on: pairs });
+        // Runtime validation: ensure join type is valid
+        const jt = String(type);
+        if (jt !== "inner" && jt !== "left" && jt !== "right" && jt !== "full") {
+          throw new Error(`Invalid join type: ${jt}. Allowed: inner | left | right | full`);
+        }
+        this.s.joins.push({ type: jt as any, target, on: pairs });
         return this;
       };
 
@@ -248,7 +280,13 @@ class TableQueryImpl<S extends DBSchema, TN extends string> implements TableQuer
         if (selected.length === 1 && selected[0] === "*") {
           colsSql = `"${table.name}".*`;
         } else {
-          colsSql = (selected as string[]).map(c => `"${table.name}"."${c}"`).join(", ");
+          // Runtime validation: ensure every selected column exists on the table
+          const sel = selected as string[];
+          for (const c of sel) {
+            // will throw if column not found
+            findColumn(table, String(c));
+          }
+          colsSql = sel.map(c => `"${table.name}"."${c}"`).join(", ");
         }
         parts.push(`select ${colsSql} from "${table.name}"`);
 
