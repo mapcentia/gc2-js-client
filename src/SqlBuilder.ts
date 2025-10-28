@@ -158,6 +158,7 @@ export interface TableQuery<S extends DBSchema, TN extends string> {
 
 export interface SelectQuery<S extends DBSchema, TN extends string> {
   where: (where: WhereForTable<S, TN>) => SelectQuery<S, TN>;
+  orWhere: (where: WhereForTable<S, TN>) => SelectQuery<S, TN>;
   orderBy: (order: ReadonlyArray<readonly [ColumnNames<S, TN>, "asc" | "desc"]> | ColumnNames<S, TN>) => SelectQuery<S, TN>;
   limit: (n: number) => SelectQuery<S, TN>;
   offset: (n: number) => SelectQuery<S, TN>;
@@ -199,6 +200,7 @@ class TableQueryImpl<S extends DBSchema, TN extends string> implements TableQuer
       table,
       selected,
       where: {} as WhereForTable<S, TN>,
+      orWhereGroups: [] as WhereForTable<S, TN>[],
       order: [] as { col: ColumnNames<S, TN>; dir: "asc" | "desc" }[],
       limit: undefined as number | undefined,
       offset: undefined as number | undefined,
@@ -211,6 +213,12 @@ class TableQueryImpl<S extends DBSchema, TN extends string> implements TableQuer
       where = (w: WhereForTable<S, TN>) => {
         // merge
         for (const k in w as Record<string, unknown>) this.s.where[k as keyof typeof w] = (w as any)[k];
+        return this;
+      };
+
+      orWhere = (w: WhereForTable<S, TN>) => {
+        // push a new OR group
+        this.s.orWhereGroups.push(w);
         return this;
       };
 
@@ -297,6 +305,7 @@ class TableQueryImpl<S extends DBSchema, TN extends string> implements TableQuer
         }
 
         const whereClauses: string[] = [];
+        // Base AND where
         for (const key in state.where) {
           const value = (state.where as any)[key];
           const col = findColumn(table, key);
@@ -315,6 +324,28 @@ class TableQueryImpl<S extends DBSchema, TN extends string> implements TableQuer
             params[paramName] = value;
             addTypeHintForParam(type_hints, paramName, col, value);
           }
+        }
+        // OR groups, each becomes a parenthesized OR chain and ANDed with others
+        for (const group of state.orWhereGroups) {
+          const orParts: string[] = [];
+          for (const key in group as Record<string, unknown>) {
+            const value = (group as any)[key];
+            const col = findColumn(table, key);
+            p += 1;
+            const paramName = `${table.name}_${key}_${p}`;
+            if (value === null) {
+              orParts.push(`"${table.name}"."${key}" is null`);
+            } else if (Array.isArray(value)) {
+              orParts.push(`"${table.name}"."${key}" = ANY(:${paramName})`);
+              params[paramName] = value;
+              addTypeHintForParam(type_hints, paramName, col, value);
+            } else {
+              orParts.push(`"${table.name}"."${key}" = :${paramName}`);
+              params[paramName] = value;
+              addTypeHintForParam(type_hints, paramName, col, value);
+            }
+          }
+          if (orParts.length) whereClauses.push("(" + orParts.join(" or ") + ")");
         }
         if (whereClauses.length) parts.push("where " + whereClauses.join(" and "));
 
