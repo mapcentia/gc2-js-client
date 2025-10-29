@@ -30,7 +30,7 @@ Requirements:
 
 ESM import:
 ```ts
-import { CodeFlow, PasswordFlow, Sql, Rpc, createApi, SignUp } from "@centia-io/sdk";
+import { CodeFlow, PasswordFlow, Sql, Rpc, createApi, SignUp, createSqlBuilder } from "@centia-io/sdk";
 import type { RpcRequest, RpcResponse, PgTypes } from "@centia-io/sdk";
 ```
 
@@ -211,7 +211,7 @@ Build strongly typed SQL requests from a DB schema so you don't write raw SQL.
 
 - Function: `createSqlBuilder(schema)`
 - Types: `DBSchema`, `TableDef`, `ColumnDef`
-- Supports: `select(where/orderBy/limit/offset)`, `insert(returning)`, `update(where, returning)`, `delete(where, returning)`
+- Supports: `select` (andWhere/orWhere, andWhereOp/orWhereOp, grouped predicates, orderBy, limit, offset, join, selectFrom), `insert(returning)`, `update(where, returning)`, `delete(where, returning)`
 - Produces an object with `toSql(): SqlRequest` which you pass to `new Sql().exec()`
 
 Example:
@@ -239,7 +239,7 @@ const b = createSqlBuilder(schema);
 // SELECT with where/order/limit
 const selectReq = b.table("items")
   .select(["id", "name"]) // or omit to select all: .select()
-  .where({ type: [1, 2, 3] }) // => "type" = ANY(:param)
+  .andWhere({ type: [1, 2, 3] }) // => "type" = ANY(:param)
   .orderBy([["id","desc"]])
   .limit(10)
   .toSql();
@@ -377,3 +377,194 @@ Notes:
 ## License
 
 The SDK is licensed under [The MIT License](https://opensource.org/license/mit)
+
+
+---
+
+## Advanced SqlBuilder examples (developer guide)
+
+Below are practical, copy/paste‑ready snippets that demonstrate the SqlBuilder API in real scenarios. These mirror and condense the exhaustive examples in examples/test_builder.ts.
+
+Setup (minimal schema with a foreign key for joins):
+```ts
+import { createSqlBuilder } from "@centia-io/sdk";
+import type { DBSchema } from "@centia-io/sdk";
+
+const schema = {
+  name: "public",
+  tables: [
+    {
+      name: "items",
+      columns: [
+        { name: "id", _typname: "int4", _is_array: false, is_nullable: false },
+        { name: "name", _typname: "varchar", _is_array: false, is_nullable: false },
+        { name: "type", _typname: "int4", _is_array: false, is_nullable: false },
+      ],
+      constraints: [
+        { name: "items-pk", constraint: "primary", columns: ["id"] },
+        {
+          name: "items-type-fk",
+          constraint: "foreign",
+          columns: ["type"],
+          referenced_table: "item_types",
+          referenced_columns: ["id"],
+        },
+      ],
+    },
+    {
+      name: "item_types",
+      columns: [
+        { name: "id", _typname: "int4", _is_array: false, is_nullable: false },
+        { name: "type", _typname: "varchar", _is_array: false, is_nullable: true },
+      ],
+      constraints: [{ name: "item_types-pk", constraint: "primary", columns: ["id"] }],
+    },
+  ],
+} as const satisfies DBSchema;
+
+const b = createSqlBuilder(schema);
+```
+
+- Selecting all or specific columns
+```ts
+b.table("items").select().toSql();
+// select "items".* from "public"."items"
+
+b.table("items").select(["id", "name"]).toSql();
+// select "items"."id", "items"."name" from "public"."items"
+```
+
+- AND filters (equality and arrays -> ANY)
+```ts
+b.table("items").select()
+  .andWhere({ id: 3, type: [1,2,3] })
+  .toSql();
+// where "items"."id" = :items_id_1 and "items"."type" = ANY(:items_type_2)
+```
+
+- OR filters (object groups)
+```ts
+b.table("items").select()
+  .orWhere({ id: 1 })
+  .orWhere({ id: 2 })
+  .toSql();
+// where ("items"."id" = :items_id_1) or ("items"."id" = :items_id_2)
+```
+
+- Operator predicates: comparisons, LIKE variants, IN/NOT IN, NULL checks
+```ts
+b.table("items").select()
+  .andWhereOp("id", ">", 10)
+  .andWhereOp("name", "ilike", "%foo%")
+  .andWhereOp("type", "in", [1,2])
+  .andWhereOp("name", "isnull")
+  .toSql();
+```
+
+- Grouped predicates and OR chains
+```ts
+b.table("items").select()
+  .andWhereOpGroup([
+    ["type", "in", [1,2]],
+    ["id", ">=", 10],
+  ])
+  .orWhereOpGroup([["name", "ilike", "%foo%"]])
+  .orWhereOpGroup([["name", "ilike", "%bar%"], ["id", "<", 50]])
+  .toSql();
+```
+
+- JOIN by foreign key + selecting from the joined table
+```ts
+// Auto-detects ON using FK items.type -> item_types.id
+b.table("items").select(["id","name"]).join("item_types").toSql();
+// select ... from "public"."items" inner join "public"."item_types" on "items"."type" = "item_types"."id"
+
+// Select specific columns from joined table
+b.table("items")
+  .select(["id"])                // base table columns
+  .join("item_types", "left")    // join type: inner|left|right|full
+  .selectFrom("item_types", ["type"]) // joined table columns
+  .toSql();
+
+// Select all columns from the joined table
+b.table("items").select(["id"]).join("item_types").selectFrom("item_types").toSql();
+```
+
+- ORDER BY, LIMIT, OFFSET
+```ts
+b.table("items").select().orderBy("id").toSql();
+// order by "items"."id" asc
+
+b.table("items").select().orderBy([["type","desc"],["id","asc"]]).toSql();
+
+b.table("items").select().limit(25).offset(50).toSql();
+```
+
+- INSERT, UPDATE, DELETE
+```ts
+b.table("items").insert({ id: 1, name: "A", type: 1 }).returning(["id"]).toSql();
+
+b.table("items").update({ name: "B" }).where({ id: 1 }).returning(["id","name"]).toSql();
+
+b.table("items").delete().where({ id: 1 }).toSql();
+```
+
+- Special value types (ranges, intervals, geometry) – supported at compile‑time and runtime
+```ts
+// Ranges (e.g., tstzrange)
+const events = {
+  name: "public",
+  tables: [{
+    name: "events",
+    columns: [
+      { name: "id", _typname: "int4", _is_array: false, is_nullable: false },
+      { name: "period", _typname: "tstzrange", _is_array: false, is_nullable: true },
+    ]
+  }]
+} as const satisfies DBSchema;
+
+createSqlBuilder(events).table("events").select().andWhere({
+  period: {
+    lower: "2024-01-01T00:00:00+00:00",
+    upper: "2024-12-31T23:59:59+00:00",
+    lowerInclusive: true,
+    upperInclusive: false,
+  }
+}).toSql();
+
+// Interval
+const durations = {
+  name: "public",
+  tables: [{
+    name: "durations",
+    columns: [
+      { name: "id", _typname: "int4", _is_array: false, is_nullable: false },
+      { name: "duration", _typname: "interval", _is_array: false, is_nullable: true },
+    ]
+  }]
+} as const satisfies DBSchema;
+
+createSqlBuilder(durations).table("durations").select().andWhere({
+  duration: { y: 0, m: 1, d: 0, h: 2, i: 0, s: 0 }
+}).toSql();
+
+// Geometry (point example)
+const shapes = {
+  name: "public",
+  tables: [{
+    name: "shapes",
+    columns: [
+      { name: "id", _typname: "int4", _is_array: false, is_nullable: false },
+      { name: "pt", _typname: "point", _is_array: false, is_nullable: true },
+    ]
+  }]
+} as const satisfies DBSchema;
+
+createSqlBuilder(shapes).table("shapes").select().andWhere({ pt: { x: 1, y: 2 } }).toSql();
+```
+
+Notes and tips:
+- All SQL is schema‑qualified: from "schema"."table" and in JOINs.
+- Type hints are added automatically for all parameters (scalars and arrays). Arrays are hinted as e.g. int4[], scalars as their base type (e.g., int4, varchar, jsonb).
+- Runtime validation mirrors the editor’s type checks: invalid column names, wrong orderBy direction, bad join type, negative limit/offset, wrong where/whereOp value shapes (including range/interval/geometry), and nulls on non‑nullable columns produce clear errors.
+- For more, see the full script in examples/test_builder.ts which prints the generated SQL and parameters for dozens of cases.

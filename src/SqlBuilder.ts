@@ -177,7 +177,19 @@ function addTypeHintForParam(
   value: unknown
 ) {
   // Always provide a type hint: scalar as base typname, arrays as base[]
-  const isArr = Array.isArray(value) || col._is_array;
+  // Special-case array-shaped geometric scalars (path, polygon):
+  // - Equality scalar: value looks like an array but represents a single scalar -> hint as base (no [])
+  // - IN/ANY arrays: value is array of those scalars (nested arrays) -> hint as base[]
+  let isArr = col._is_array;
+  if (Array.isArray(value)) {
+    if (isArrayShapedGeomTypename(col._typname)) {
+      const top = value as unknown[];
+      // If every element is itself an array, it's an array of geom scalars
+      isArr = top.every(Array.isArray);
+    } else {
+      isArr = true;
+    }
+  }
   const hint = typeNameToHint(col._typname, isArr);
   if (hint) typeHints[paramName] = hint;
 }
@@ -194,6 +206,22 @@ function expectedScalarKind(typname: string): "number" | "string" | "boolean" | 
   if (t === "interval") return "interval";
   if (t === "point" || t === "line" || t === "lseg" || t === "box" || t === "path" || t === "polygon" || t === "circle") return "geom";
   return "unknown";
+}
+
+function isArrayShapedGeomTypename(typname: string): boolean {
+  const t = typname.toLowerCase();
+  // path and polygon are represented as arrays at the value level, but are scalar types in PG
+  return t === "path" || t === "polygon";
+}
+
+function isArrayShapedGeomScalarValue(col: ColumnDef, value: unknown): boolean {
+  // Detect if a provided array value represents a single scalar for array-shaped geometric types
+  if (!Array.isArray(value)) return false;
+  if (!isArrayShapedGeomTypename(col._typname)) return false;
+  const top = value as unknown[];
+  // If every element is an array, then this is an array of scalars (for IN/ANY)
+  // Otherwise, it's a single scalar (path or polygon)
+  return !top.every(Array.isArray);
 }
 
 function expectedRangeInnerKind(typname: string): "number" | "string" | "unknown" {
@@ -403,9 +431,10 @@ function validateComparisonValue(col: ColumnDef, key: string, value: unknown, op
       validateScalarForColumn(col, v, `column ${key}[${i}]`);
     }
   } else {
-    if (Array.isArray(value)) {
+    if (Array.isArray(value) && !isArrayShapedGeomScalarValue(col, value)) {
       throw new Error(`Operator ${op} on scalar column ${key} cannot accept an array value`);
     }
+    // Note: some scalar types (path, polygon) appear as arrays at the value level; they are handled by validateScalarForColumn
     validateScalarForColumn(col, value, `column ${key}`);
   }
 }
@@ -696,7 +725,7 @@ class TableQueryImpl<S extends DBSchema, TN extends string> implements TableQuer
               throw new Error(`Column ${table.name}.${key} is not nullable; cannot compare to null`);
             }
             andParts.push(`"${table.name}"."${key}" is null`);
-          } else if (Array.isArray(value)) {
+          } else if (Array.isArray(value) && !isArrayShapedGeomScalarValue(col, value)) {
             // Validate array element types (treat as IN semantics)
             validateInArrayValues(col, key, value as unknown[], "in");
             // IN via = ANY(:param)
@@ -704,7 +733,7 @@ class TableQueryImpl<S extends DBSchema, TN extends string> implements TableQuer
             params[paramName] = value;
             addTypeHintForParam(type_hints, paramName, col, value);
           } else {
-            // Validate scalar matches column type
+            // Validate scalar matches column type (note: path/polygon may appear as arrays but represent a single scalar)
             validateScalarForColumn(col, value, `column ${key}`);
             andParts.push(`"${table.name}"."${key}" = :${paramName}`);
             params[paramName] = value;
@@ -781,14 +810,14 @@ class TableQueryImpl<S extends DBSchema, TN extends string> implements TableQuer
                 throw new Error(`Column ${table.name}.${key} is not nullable; cannot compare to null`);
               }
               orParts.push(`"${table.name}"."${key}" is null`);
-            } else if (Array.isArray(value)) {
+            } else if (Array.isArray(value) && !isArrayShapedGeomScalarValue(col, value)) {
               // Validate array element types (treat as IN semantics)
               validateInArrayValues(col, key, value as unknown[], "in");
               orParts.push(`"${table.name}"."${key}" = ANY(:${paramName})`);
               params[paramName] = value;
               addTypeHintForParam(type_hints, paramName, col, value);
             } else {
-              // Validate scalar matches column type
+              // Validate scalar matches column type (note: path/polygon may appear as arrays but represent a single scalar)
               validateScalarForColumn(col, value, `column ${key}`);
               orParts.push(`"${table.name}"."${key}" = :${paramName}`);
               params[paramName] = value;
@@ -952,14 +981,14 @@ class TableQueryImpl<S extends DBSchema, TN extends string> implements TableQuer
               throw new Error(`Column ${table.name}.${key} is not nullable; cannot compare to null`);
             }
             whereClauses.push(`"${key}" is null`);
-          } else if (Array.isArray(value)) {
+          } else if (Array.isArray(value) && !isArrayShapedGeomScalarValue(col, value)) {
             // Validate array element types (treat as IN semantics)
             validateInArrayValues(col, key, value as unknown[], "in");
             whereClauses.push(`"${key}" = ANY(:${paramName})`);
             params[paramName] = value;
             addTypeHintForParam(type_hints, paramName, col, value);
           } else {
-            // Validate scalar matches column type
+            // Validate scalar matches column type (note: path/polygon may appear as arrays but represent a single scalar)
             validateScalarForColumn(col, value, `column ${key}`);
             whereClauses.push(`"${key}" = :${paramName}`);
             params[paramName] = value;
