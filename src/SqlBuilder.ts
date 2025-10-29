@@ -176,12 +176,10 @@ function addTypeHintForParam(
   col: ColumnDef,
   value: unknown
 ) {
-  // If column is an array OR the value is an Array, we hint as array of the column base type
+  // Always provide a type hint: scalar as base typname, arrays as base[]
   const isArr = Array.isArray(value) || col._is_array;
-  if (isArr) {
-    const hint = typeNameToHint(col._typname, true);
-    if (hint) typeHints[paramName] = hint;
-  }
+  const hint = typeNameToHint(col._typname, isArr);
+  if (hint) typeHints[paramName] = hint;
 }
 
 // Runtime value type validation helpers for whereOp predicates
@@ -746,6 +744,7 @@ class TableQueryImpl<S extends DBSchema, TN extends string> implements TableQuer
             const sqlOp = op === "like" ? "like" : op === "ilike" ? "ilike" : op === "notlike" ? "not like" : "not ilike";
             andParts.push(`${qualified} ${sqlOp} :${paramName}`);
             params[paramName] = val;
+            addTypeHintForParam(type_hints, paramName, col, val);
           } else {
             // comparison or equality/inequality
             const val = pred.value as unknown;
@@ -827,6 +826,7 @@ class TableQueryImpl<S extends DBSchema, TN extends string> implements TableQuer
               const sqlOp = op === "like" ? "like" : op === "ilike" ? "ilike" : op === "notlike" ? "not like" : "not ilike";
               orParts.push(`${qualified} ${sqlOp} :${paramName}`);
               params[paramName] = val;
+              addTypeHintForParam(type_hints, paramName, col, val);
             } else {
               const val = pred.value as unknown;
               if (val === undefined) throw new Error(`Operator ${op} requires a value for column ${key}`);
