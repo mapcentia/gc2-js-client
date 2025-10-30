@@ -78,13 +78,40 @@ export type ColumnNames<S extends DBSchema, TN extends string> = ColumnsOf<S, TN
 type ConstraintsOfTable<T extends TableDef> = T["constraints"] extends readonly any[] ? T["constraints"][number] : never;
 
 type ReferencedTablesOfTable<T extends TableDef> = ConstraintsOfTable<T> extends infer C
-  ? C extends { constraint: "foreign"; referenced_table: infer RT extends string }
-    ? RT
-    : never
-  : never;
+    ? C extends { constraint: "foreign"; referenced_table: infer RT extends string }
+        ? RT
+        : never
+    : never;
 
 // Allowed join targets when selecting from TN: only tables referenced by TN via foreign key constraints
 export type AllowedJoinTables<S extends DBSchema, TN extends string> = ReferencedTablesOfTable<TableByName<S, TN>>;
+
+// Primary key helpers for typing wherePk
+// Extract the primary constraint for a table (if any)
+type PrimaryConstraintOfTable<T extends TableDef> = ConstraintsOfTable<T> extends infer C
+    ? Extract<C, { constraint: "primary" }>
+    : never;
+
+// The list of PK column names for the table (as a readonly tuple when schema is const)
+type PrimaryKeyColumns<S extends DBSchema, TN extends string> = PrimaryConstraintOfTable<TableByName<S, TN>> extends {
+    columns: infer A extends readonly string[]
+}
+    ? A
+    : never;
+
+type IsTupleOfLength1<T extends readonly any[]> = T extends readonly [any] ? true : false;
+
+// Value type accepted by wherePk():
+// - single-column PK -> that column's value type
+// - composite PK -> an object with all PK columns
+// - no PK -> never (method becomes impossible to call in TS)
+export type PrimaryKeyValue<S extends DBSchema, TN extends string> = PrimaryKeyColumns<S, TN> extends infer PK extends readonly string[]
+    ? PK extends never
+        ? never
+        : IsTupleOfLength1<PK> extends true
+            ? ColumnValueFor<S, TN, PK[0]>
+            : { [K in PK[number]]: ColumnValueFor<S, TN, K> }
+    : never;
 
 // Value type for a column based on typname and array/nullability flags.
 // Note: If schema is not `as const`, flags are not literal and result type becomes broader.
@@ -158,9 +185,15 @@ function findTable(schema: DBSchema, name: string): TableDef {
 }
 
 function findColumn(table: TableDef, name: string): ColumnDef {
-  const col = table.columns.find(c => c.name === name);
-  if (!col) throw new Error(`Column not found in table ${table.name}: ${name}`);
-  return col;
+    const col = table.columns.find(c => c.name === name);
+    if (!col) throw new Error(`Column not found in table ${table.name}: ${name}`);
+    return col;
+}
+
+function getPrimaryKeyColumns(table: TableDef): string[] {
+    const cs = table.constraints || [];
+    const pk = cs.find(c => c.constraint === "primary" && Array.isArray(c.columns) && c.columns.length > 0);
+    return pk ? (pk.columns as readonly string[]).map(String) : [];
 }
 
 function typeNameToHint(typname: string, isArray: boolean): string | undefined {
@@ -492,6 +525,7 @@ export interface SelectQuery<S extends DBSchema, TN extends string> {
   /** @deprecated Use andWhere() instead */
   where: (where: WhereForTable<S, TN>) => SelectQuery<S, TN>;
   orWhere: (where: WhereForTable<S, TN>) => SelectQuery<S, TN>;
+  wherePk: (pk: PrimaryKeyValue<S, TN>) => SelectQuery<S, TN>;
   // Operator-based where chaining with compile-time value checks; also rejects `any` operator by disallowing extra args when O is any
   andWhereOp<K extends ColumnNames<S, TN>, O extends WhereOperator>(col: K, op: O, ...args: OpArgsFor<S, TN, K, O>): SelectQuery<S, TN>;
   orWhereOp<K extends ColumnNames<S, TN>, O extends WhereOperator>(col: K, op: O, ...args: OpArgsFor<S, TN, K, O>): SelectQuery<S, TN>;
@@ -511,12 +545,14 @@ export interface InsertQuery<S extends DBSchema, TN extends string> {
 
 export interface UpdateQuery<S extends DBSchema, TN extends string> {
   where: (where: WhereForTable<S, TN>) => UpdateQuery<S, TN>;
+  wherePk: (pk: PrimaryKeyValue<S, TN>) => UpdateQuery<S, TN>;
   returning: (cols?: ReadonlyArray<ColumnNames<S, TN>>) => UpdateQuery<S, TN>;
   toSql: () => SqlRequest<Record<string, unknown>>;
 }
 
 export interface DeleteQuery<S extends DBSchema, TN extends string> {
   where: (where: WhereForTable<S, TN>) => DeleteQuery<S, TN>;
+  wherePk: (pk: PrimaryKeyValue<S, TN>) => DeleteQuery<S, TN>;
   returning: (cols?: ReadonlyArray<ColumnNames<S, TN>>) => DeleteQuery<S, TN>;
   toSql: () => SqlRequest<Record<string, unknown>>;
 }
@@ -587,10 +623,60 @@ class TableQueryImpl<S extends DBSchema, TN extends string> implements TableQuer
       where(where: WhereForTable<S, TN>): SelectQuery<S, TN> { return this.andWhere(where); }
 
       orWhere(where: WhereForTable<S, TN>): SelectQuery<S, TN> {
-        // push a new OR group
-        this.s.orWhereGroups.push(where);
-        return this;
-      }
+                // push a new OR group
+                this.s.orWhereGroups.push(where);
+                return this;
+            }
+
+            wherePk(pk: PrimaryKeyValue<S, TN>): SelectQuery<S, TN> {
+                const pkCols = getPrimaryKeyColumns(table);
+                if (!pkCols || pkCols.length === 0) {
+                    throw new Error(`Table ${table.name} does not have a primary key`);
+                }
+                if (pkCols.length === 1) {
+                    const colName = pkCols[0];
+                    const colDef = findColumn(table, colName);
+                    if (pk === null || pk === undefined) {
+                        throw new Error(`wherePk on ${table.name} requires a non-null value for primary key column ${colName}`);
+                    }
+                    if (Array.isArray(pk)) {
+                        throw new Error(`wherePk on ${table.name} expects a scalar for primary key column ${colName}, not an array`);
+                    }
+                    if (isPlainObject(pk)) {
+                        throw new Error(`wherePk on ${table.name} expects a scalar for primary key column ${colName}`);
+                    }
+                    // Runtime type validation against the PK column type
+                    validateScalarForColumn(colDef, pk as unknown, `primary key ${table.name}.${colName}`);
+                    (this.s.where as any)[colName] = pk as unknown;
+                    return this;
+                } else {
+                    if (!isPlainObject(pk) || pk === null) {
+                        throw new Error(`wherePk on ${table.name} requires an object with keys: ${pkCols.join(", ")}`);
+                    }
+                    const obj = pk as Record<string, unknown>;
+                    for (const k of Object.keys(obj)) {
+                        if (!pkCols.includes(k)) {
+                            throw new Error(`wherePk received unknown key '${k}'. Expected keys: ${pkCols.join(", ")}`);
+                        }
+                    }
+                    for (const colName of pkCols) {
+                        if (!(colName in obj)) {
+                            throw new Error(`wherePk missing key '${colName}'. Required keys: ${pkCols.join(", ")}`);
+                        }
+                        const v = obj[colName];
+                        if (v === null || v === undefined) {
+                            throw new Error(`wherePk on ${table.name} requires non-null values for all primary key columns (${pkCols.join(", ")})`);
+                        }
+                        if (Array.isArray(v)) {
+                            throw new Error(`wherePk on ${table.name} expects scalar values for primary key column ${colName}, not an array`);
+                        }
+                        const colDef = findColumn(table, colName);
+                        validateScalarForColumn(colDef, v, `primary key ${table.name}.${colName}`);
+                        (this.s.where as any)[colName] = v;
+                    }
+                    return this;
+                }
+            }
 
       andWhereOp<K extends ColumnNames<S, TN>, O extends WhereOperator>(col: K, op: O, ...args: OpArgsFor<S, TN, K, O>): SelectQuery<S, TN>;
       andWhereOp(col: any, op: any, ...args: any[]): SelectQuery<S, TN> {
@@ -952,6 +1038,35 @@ class TableQueryImpl<S extends DBSchema, TN extends string> implements TableQuer
 
     return new (class implements UpdateQuery<S, TN> {
       where = (w: WhereForTable<S, TN>) => { for (const k in w as Record<string, unknown>) state.where[k as keyof typeof w] = (w as any)[k]; return this; };
+      wherePk = (pk: PrimaryKeyValue<S, TN>) => {
+        const pkCols = getPrimaryKeyColumns(table);
+        if (!pkCols || pkCols.length === 0) throw new Error(`Table ${table.name} does not have a primary key`);
+        if (pkCols.length === 1) {
+          const colName = pkCols[0];
+          const colDef = findColumn(table, colName);
+          if (pk === null || pk === undefined) throw new Error(`wherePk on ${table.name} requires a non-null value for primary key column ${colName}`);
+          if (Array.isArray(pk)) throw new Error(`wherePk on ${table.name} expects a scalar for primary key column ${colName}, not an array`);
+          if (isPlainObject(pk)) throw new Error(`wherePk on ${table.name} expects a scalar for primary key column ${colName}`);
+          validateScalarForColumn(colDef, pk as unknown, `primary key ${table.name}.${colName}`);
+          (state.where as any)[colName] = pk as unknown;
+        } else {
+          if (!isPlainObject(pk) || pk === null) throw new Error(`wherePk on ${table.name} requires an object with keys: ${pkCols.join(", ")}`);
+          const obj = pk as Record<string, unknown>;
+          for (const k of Object.keys(obj)) {
+            if (!pkCols.includes(k)) throw new Error(`wherePk received unknown key '${k}'. Expected keys: ${pkCols.join(", ")}`);
+          }
+          for (const colName of pkCols) {
+            if (!(colName in obj)) throw new Error(`wherePk missing key '${colName}'. Required keys: ${pkCols.join(", ")}`);
+            const v = obj[colName];
+            if (v === null || v === undefined) throw new Error(`wherePk on ${table.name} requires non-null values for all primary key columns (${pkCols.join(", ")})`);
+            if (Array.isArray(v)) throw new Error(`wherePk on ${table.name} expects scalar values for primary key column ${colName}, not an array`);
+            const colDef = findColumn(table, colName);
+            validateScalarForColumn(colDef, v, `primary key ${table.name}.${colName}`);
+            (state.where as any)[colName] = v;
+          }
+        }
+        return this;
+      };
       returning = (cols?: ReadonlyArray<ColumnNames<S, TN>>) => { state.returning = (cols as ColumnNames<S, TN>[] | undefined) || []; return this; };
 
       toSql = (): SqlRequest => {
@@ -1017,6 +1132,26 @@ class TableQueryImpl<S extends DBSchema, TN extends string> implements TableQuer
 
     return new (class implements DeleteQuery<S, TN> {
       where = (w: WhereForTable<S, TN>) => { for (const k in w as Record<string, unknown>) state.where[k as keyof typeof w] = (w as any)[k]; return this; };
+      wherePk = (pk: PrimaryKeyValue<S, TN>) => {
+        const pkCols = getPrimaryKeyColumns(table);
+        if (!pkCols || pkCols.length === 0) throw new Error(`Table ${table.name} does not have a primary key`);
+        if (pkCols.length === 1) {
+          const col = pkCols[0];
+          if (isPlainObject(pk)) throw new Error(`wherePk on ${table.name} expects a scalar for primary key column ${col}`);
+          (state.where as any)[col] = pk as unknown;
+        } else {
+          if (!isPlainObject(pk)) throw new Error(`wherePk on ${table.name} requires an object with keys: ${pkCols.join(", ")}`);
+          const obj = pk as Record<string, unknown>;
+          for (const k of Object.keys(obj)) {
+            if (!pkCols.includes(k)) throw new Error(`wherePk received unknown key '${k}'. Expected keys: ${pkCols.join(", ")}`);
+          }
+          for (const col of pkCols) {
+            if (!(col in obj)) throw new Error(`wherePk missing key '${col}'. Required keys: ${pkCols.join(", ")}`);
+            (state.where as any)[col] = obj[col];
+          }
+        }
+        return this;
+      };
       returning = (cols?: ReadonlyArray<ColumnNames<S, TN>>) => { state.returning = (cols as ColumnNames<S, TN>[] | undefined) || []; return this; };
 
       toSql = (): SqlRequest => {
