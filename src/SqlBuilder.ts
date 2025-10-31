@@ -8,6 +8,7 @@ export interface ColumnDef {
   _is_array: boolean;
   is_nullable: boolean;
   type?: string; // e.g. character varying(255)
+  [key: string]: any;
 }
 
 export interface ConstraintDef {
@@ -23,6 +24,7 @@ export interface TableDef {
   // Use readonly arrays so `as const` schemas preserve literal column names for typing
   columns: readonly ColumnDef[];
   constraints?: readonly ConstraintDef[];
+  [key: string]: any;
 }
 
 export interface DBSchema {
