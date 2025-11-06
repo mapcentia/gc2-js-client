@@ -523,7 +523,7 @@ export interface TableQuery<S extends DBSchema, TN extends string> {
 }
 
 export interface SelectQuery<S extends DBSchema, TN extends string> {
-  selectFrom: <JT extends AllowedJoinTables<S, TN>>(table: JT, cols?: ReadonlyArray<ColumnNames<S, JT>>) => SelectQuery<S, TN>;
+  selectFrom: <JT extends TableNames<S>>(table: JT, cols?: ReadonlyArray<ColumnNames<S, JT>>) => SelectQuery<S, TN>;
   andWhere: (where: WhereForTable<S, TN>) => SelectQuery<S, TN>;
   /** @deprecated Use andWhere() instead */
   where: (where: WhereForTable<S, TN>) => SelectQuery<S, TN>;
@@ -537,7 +537,7 @@ export interface SelectQuery<S extends DBSchema, TN extends string> {
   orderBy: (order: ReadonlyArray<readonly [ColumnNames<S, TN>, "asc" | "desc"]> | ColumnNames<S, TN>) => SelectQuery<S, TN>;
   limit: (n: number) => SelectQuery<S, TN>;
   offset: (n: number) => SelectQuery<S, TN>;
-  join: <JT extends AllowedJoinTables<S, TN>>(table: JT, type?: "inner" | "left" | "right" | "full") => SelectQuery<S, TN>;
+  join: <JT extends TableNames<S>>(table: JT, type?: "inner" | "left" | "right" | "full") => SelectQuery<S, TN>;
   toSql: () => SqlRequest<Record<string, unknown>>;
 }
 
@@ -584,14 +584,14 @@ class TableQueryImpl<S extends DBSchema, TN extends string> implements TableQuer
       order: [] as { col: ColumnNames<S, TN>; dir: "asc" | "desc" }[],
       limit: undefined as number | undefined,
       offset: undefined as number | undefined,
-      joins: [] as { type: "inner" | "left" | "right" | "full"; target: TableDef; on: { left: string; right: string }[] }[],
+      joins: [] as { type: "inner" | "left" | "right" | "full"; source: TableDef; target: TableDef; on: { left: string; right: string }[] }[],
       joinSelections: [] as { target: TableDef; selected: (string | "*")[] }[],
     };
 
     return new (class implements SelectQuery<S, TN> {
       private s = state;
 
-      selectFrom<JT extends AllowedJoinTables<S, TN>>(tableName: JT, cols?: ReadonlyArray<ColumnNames<S, JT>>): SelectQuery<S, TN> {
+      selectFrom<JT extends TableNames<S>>(tableName: JT, cols?: ReadonlyArray<ColumnNames<S, JT>>): SelectQuery<S, TN> {
         const jtName = String(tableName);
         const join = this.s.joins.find(j => j.target.name === jtName);
         if (!join) {
@@ -744,16 +744,38 @@ class TableQueryImpl<S extends DBSchema, TN extends string> implements TableQuer
         return this;
       }
 
-      join<JT extends AllowedJoinTables<S, TN>>(tableName: JT, type: "inner" | "left" | "right" | "full" = "inner"): SelectQuery<S, TN> {
+      join<JT extends TableNames<S>>(tableName: JT, type: "inner" | "left" | "right" | "full" = "inner"): SelectQuery<S, TN> {
         const target = findTable(schema, String(tableName));
-        const pairs = findJoinOn(table, target);
-        if (!pairs || !pairs.length) throw new Error(`No foreign key relation found between ${table.name} and ${target.name}`);
-        // Runtime validation: ensure join type is valid
+
+        // Determine the source table to join from: try most recent join targets first, then earlier ones, then base table
+        const sources: TableDef[] = [];
+        // Add existing joined targets in reverse order (most recent first)
+        for (let i = this.s.joins.length - 1; i >= 0; i--) {
+          const src = this.s.joins[i].target;
+          if (!sources.some(s => s.name === src.name)) sources.push(src);
+        }
+        // Finally, add the base table
+        if (!sources.some(s => s.name === table.name)) sources.push(table);
+
+        let pickedSource: TableDef | null = null;
+        let pairs: { left: string; right: string }[] | null = null;
+        for (const src of sources) {
+          const p = findJoinOn(src, target);
+          if (p && p.length) { pickedSource = src; pairs = p; break; }
+        }
+
+        if (!pairs || !pickedSource) {
+          const candidates = sources.map(s => s.name).join(", ");
+          throw new Error(`No foreign key relation found between any of [${candidates}] and ${target.name}`);
+        }
+
+        // Validate join type
         const jt = String(type);
         if (jt !== "inner" && jt !== "left" && jt !== "right" && jt !== "full") {
           throw new Error(`Invalid join type: ${jt}. Allowed: inner | left | right | full`);
         }
-        this.s.joins.push({ type: jt as any, target, on: pairs });
+
+        this.s.joins.push({ type: jt as any, source: pickedSource, target, on: pairs });
         return this;
       }
 
@@ -790,7 +812,7 @@ class TableQueryImpl<S extends DBSchema, TN extends string> implements TableQuer
 
         // JOINs
         for (const j of state.joins) {
-          const onExpr = j.on.map(p => `"${table.name}"."${p.left}" = "${j.target.name}"."${p.right}"`).join(" and ");
+          const onExpr = j.on.map(p => `"${j.source.name}"."${p.left}" = "${j.target.name}"."${p.right}"`).join(" and ");
           parts.push(`${j.type} join "${schema.name}"."${j.target.name}" on ${onExpr}`);
         }
 
