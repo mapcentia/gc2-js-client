@@ -14,9 +14,10 @@ export interface ColumnDef {
 export interface ConstraintDef {
   name: string;
   constraint: "primary" | "foreign" | string;
-  columns: readonly string[];
+  columns?: readonly string[];
   referenced_table?: string;
   referenced_columns?: readonly string[];
+  check?: string;
 }
 
 export interface TableDef {
@@ -987,7 +988,7 @@ class TableQueryImpl<S extends DBSchema, TN extends string> implements TableQuer
 
         return {
           q: parts.join(" "),
-          params,
+          params : Object.keys(params).length > 0 ? params: undefined,
           type_hints: Object.keys(type_hints).length ? type_hints : undefined,
         };
       };
@@ -1026,7 +1027,7 @@ class TableQueryImpl<S extends DBSchema, TN extends string> implements TableQuer
 
         return {
           q: parts.join(" "),
-          params,
+          params : Object.keys(params).length > 0 ? params: undefined,
           type_hints: Object.keys(type_hints).length ? type_hints : undefined,
         };
       };
@@ -1120,7 +1121,7 @@ class TableQueryImpl<S extends DBSchema, TN extends string> implements TableQuer
 
         return {
           q: parts.join(" "),
-          params,
+            params : Object.keys(params).length > 0 ? params: undefined,
           type_hints: Object.keys(type_hints).length ? type_hints : undefined,
         };
       };
@@ -1194,7 +1195,7 @@ class TableQueryImpl<S extends DBSchema, TN extends string> implements TableQuer
 
         return {
           q: parts.join(" "),
-          params,
+          params : Object.keys(params).length > 0 ? params: undefined,
           type_hints: Object.keys(type_hints).length ? type_hints : undefined,
         };
       };
