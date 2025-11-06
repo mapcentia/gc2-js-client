@@ -62,18 +62,16 @@ export default class CodeFlow {
     public async signIn(): Promise<void> {
         const {state, codeVerifier, codeChallenge} = await generatePkceChallenge()
         getStorage().setItem("state", state)
-        getStorage().setItem("codeVerifier", codeVerifier);
-        // @ts-ignore
-        window.location = this.service.getAuthorizationCodeURL(
+        getStorage().setItem("codeVerifier", codeVerifier)
+        window.location.assign(this.service.getAuthorizationCodeURL(
             codeChallenge,
             state,
-        );
+        ))
     }
 
     public signOut(): void {
         this.clear()
-        // @ts-ignore
-        window.location = this.service.getSignOutURL();
+        window.location.assign(this.service.getSignOutURL())
     }
 
     public clear(): void {

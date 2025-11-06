@@ -11,7 +11,6 @@ export default class SignUp {
     }
 
     public async signUp(): Promise<void> {
-        // @ts-ignore
-        window.location = this.service.getSignUpURL();
+        window.location.assign(this.service.getSignUpURL())
     }
 }
