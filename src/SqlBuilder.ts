@@ -511,9 +511,18 @@ export interface SqlBuilder<S extends DBSchema> {
   table: <TN extends TableNames<S>>(name: TN) => TableQuery<S, TN>;
 }
 
+// Row type helpers for selections
+export type RowForTable<S extends DBSchema, TN extends string> = {
+  [K in ColumnNames<S, TN>]: ColumnValueFor<S, TN, K>
+};
+export type PickRow<S extends DBSchema, TN extends string, C extends ReadonlyArray<ColumnNames<S, TN>>> = {
+  [K in C[number]]: ColumnValueFor<S, TN, K>
+};
+
 export interface TableQuery<S extends DBSchema, TN extends string> {
   // SELECT
-  select: (cols?: ReadonlyArray<ColumnNames<S, TN>>) => SelectQuery<S, TN>;
+  select(): SelectQuery<S, TN, RowForTable<S, TN>>;
+  select<C extends ReadonlyArray<ColumnNames<S, TN>>>(cols: C): SelectQuery<S, TN, PickRow<S, TN, C>>;
   // INSERT
   insert: (values: ValuesForTable<S, TN>) => InsertQuery<S, TN>;
   // UPDATE
@@ -522,23 +531,23 @@ export interface TableQuery<S extends DBSchema, TN extends string> {
   delete: () => DeleteQuery<S, TN>;
 }
 
-export interface SelectQuery<S extends DBSchema, TN extends string> {
-  selectFrom: <JT extends TableNames<S>>(table: JT, cols?: ReadonlyArray<ColumnNames<S, JT>>) => SelectQuery<S, TN>;
-  andWhere: (where: WhereForTable<S, TN>) => SelectQuery<S, TN>;
+export interface SelectQuery<S extends DBSchema, TN extends string, R extends PgTypes.DataRow> {
+  selectFrom: <JT extends TableNames<S>>(table: JT, cols?: ReadonlyArray<ColumnNames<S, JT>>) => SelectQuery<S, TN, R>;
+  andWhere: (where: WhereForTable<S, TN>) => SelectQuery<S, TN, R>;
   /** @deprecated Use andWhere() instead */
-  where: (where: WhereForTable<S, TN>) => SelectQuery<S, TN>;
-  orWhere: (where: WhereForTable<S, TN>) => SelectQuery<S, TN>;
-  wherePk: (pk: PrimaryKeyValue<S, TN>) => SelectQuery<S, TN>;
+  where: (where: WhereForTable<S, TN>) => SelectQuery<S, TN, R>;
+  orWhere: (where: WhereForTable<S, TN>) => SelectQuery<S, TN, R>;
+  wherePk: (pk: PrimaryKeyValue<S, TN>) => SelectQuery<S, TN, R>;
   // Operator-based where chaining with compile-time value checks; also rejects `any` operator by disallowing extra args when O is any
-  andWhereOp<K extends ColumnNames<S, TN>, O extends WhereOperator>(col: K, op: O, ...args: OpArgsFor<S, TN, K, O>): SelectQuery<S, TN>;
-  orWhereOp<K extends ColumnNames<S, TN>, O extends WhereOperator>(col: K, op: O, ...args: OpArgsFor<S, TN, K, O>): SelectQuery<S, TN>;
-  andWhereOpGroup: (predicates: ReadonlyArray<OpPredicate<S, TN>>) => SelectQuery<S, TN>;
-  orWhereOpGroup: (predicates: ReadonlyArray<OpPredicate<S, TN>>) => SelectQuery<S, TN>;
-  orderBy: (order: ReadonlyArray<readonly [ColumnNames<S, TN>, "asc" | "desc"]> | ColumnNames<S, TN>) => SelectQuery<S, TN>;
-  limit: (n: number) => SelectQuery<S, TN>;
-  offset: (n: number) => SelectQuery<S, TN>;
-  join: <JT extends TableNames<S>>(table: JT, type?: "inner" | "left" | "right" | "full") => SelectQuery<S, TN>;
-  toSql: () => SqlRequest<Record<string, unknown>>;
+  andWhereOp<K extends ColumnNames<S, TN>, O extends WhereOperator>(col: K, op: O, ...args: OpArgsFor<S, TN, K, O>): SelectQuery<S, TN, R>;
+  orWhereOp<K extends ColumnNames<S, TN>, O extends WhereOperator>(col: K, op: O, ...args: OpArgsFor<S, TN, K, O>): SelectQuery<S, TN, R>;
+  andWhereOpGroup: (predicates: ReadonlyArray<OpPredicate<S, TN>>) => SelectQuery<S, TN, R>;
+  orWhereOpGroup: (predicates: ReadonlyArray<OpPredicate<S, TN>>) => SelectQuery<S, TN, R>;
+  orderBy: (order: ReadonlyArray<readonly [ColumnNames<S, TN>, "asc" | "desc"]> | ColumnNames<S, TN>) => SelectQuery<S, TN, R>;
+  limit: (n: number) => SelectQuery<S, TN, R>;
+  offset: (n: number) => SelectQuery<S, TN, R>;
+  join: <JT extends TableNames<S>>(table: JT, type?: "inner" | "left" | "right" | "full") => SelectQuery<S, TN, R>;
+  toSql: () => PgTypes.TypedSqlRequest<R>;
 }
 
 export interface InsertQuery<S extends DBSchema, TN extends string> {
@@ -569,7 +578,10 @@ class TableQueryImpl<S extends DBSchema, TN extends string> implements TableQuer
     this.table = findTable(schema, tableName);
   }
 
-  select(cols?: ReadonlyArray<ColumnNames<S, TN>>): SelectQuery<S, TN> {
+  // Overloads provide precise row typing based on selected columns
+  select(): SelectQuery<S, TN, RowForTable<S, TN>>;
+  select<C extends ReadonlyArray<ColumnNames<S, TN>>>(cols: C): SelectQuery<S, TN, PickRow<S, TN, C>>;
+  select(cols?: ReadonlyArray<ColumnNames<S, TN>>): any {
     const table = this.table;
     const schema = this.schema;
     const selected = (cols && cols.length ? cols : ["*"]) as (ColumnNames<S, TN> | "*")[];
@@ -588,10 +600,10 @@ class TableQueryImpl<S extends DBSchema, TN extends string> implements TableQuer
       joinSelections: [] as { target: TableDef; selected: (string | "*")[] }[],
     };
 
-    return new (class implements SelectQuery<S, TN> {
+    return new (class implements SelectQuery<S, TN, any> {
       private s = state;
 
-      selectFrom<JT extends TableNames<S>>(tableName: JT, cols?: ReadonlyArray<ColumnNames<S, JT>>): SelectQuery<S, TN> {
+      selectFrom<JT extends TableNames<S>>(tableName: JT, cols?: ReadonlyArray<ColumnNames<S, JT>>): SelectQuery<S, TN, any> {
         const jtName = String(tableName);
         const join = this.s.joins.find(j => j.target.name === jtName);
         if (!join) {
@@ -617,21 +629,21 @@ class TableQueryImpl<S extends DBSchema, TN extends string> implements TableQuer
         return this;
       }
 
-      andWhere(where: WhereForTable<S, TN>): SelectQuery<S, TN> {
+      andWhere(where: WhereForTable<S, TN>): SelectQuery<S, TN, any> {
         // merge
         for (const k in where as Record<string, unknown>) this.s.where[k as keyof typeof where] = (where as any)[k];
         return this;
       }
       /** @deprecated Use andWhere() instead */
-      where(where: WhereForTable<S, TN>): SelectQuery<S, TN> { return this.andWhere(where); }
+      where(where: WhereForTable<S, TN>): SelectQuery<S, TN, any> { return this.andWhere(where); }
 
-      orWhere(where: WhereForTable<S, TN>): SelectQuery<S, TN> {
+      orWhere(where: WhereForTable<S, TN>): SelectQuery<S, TN, any> {
                 // push a new OR group
                 this.s.orWhereGroups.push(where);
                 return this;
             }
 
-            wherePk(pk: PrimaryKeyValue<S, TN>): SelectQuery<S, TN> {
+            wherePk(pk: PrimaryKeyValue<S, TN>): SelectQuery<S, TN, any> {
                 const pkCols = getPrimaryKeyColumns(table);
                 if (!pkCols || pkCols.length === 0) {
                     throw new Error(`Table ${table.name} does not have a primary key`);
@@ -681,7 +693,7 @@ class TableQueryImpl<S extends DBSchema, TN extends string> implements TableQuer
                 }
             }
 
-      andWhereOp<K extends ColumnNames<S, TN>, O extends WhereOperator>(col: K, op: O, ...args: OpArgsFor<S, TN, K, O>): SelectQuery<S, TN>;
+      andWhereOp<K extends ColumnNames<S, TN>, O extends WhereOperator>(col: K, op: O, ...args: OpArgsFor<S, TN, K, O>): SelectQuery<S, TN, any>;
       andWhereOp(col: any, op: any, ...args: any[]): SelectQuery<S, TN> {
         const value = args[0];
         this.s.andOps.push({ col, op, value });

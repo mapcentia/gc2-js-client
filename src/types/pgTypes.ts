@@ -91,6 +91,12 @@ export interface SqlRequest<Params extends Record<string, unknown> = Record<stri
     type_formats?: Record<string, string>; // e.g. { my_timestamp: "l jS Y \\a\\t H:i:s" }
 }
 
+// Phantom-typed request that carries the expected row type at compile time only
+export interface TypedSqlRequest<Row extends DataRow, Params extends Record<string, unknown> = Record<string, unknown>> extends SqlRequest<Params> {
+    // This property is never set at runtime; it exists only to carry the Row type
+    readonly __row?: Row;
+}
+
 export interface RpcRequest<Params extends Record<string, unknown> = Record<string, unknown>> {
     jsonrpc: "2.0"
     method: string
