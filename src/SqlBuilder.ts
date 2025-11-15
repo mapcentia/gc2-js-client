@@ -517,6 +517,13 @@ export type PickRow<S extends DBSchema, TN extends string, C extends ReadonlyArr
   [K in C[number]]: ColumnValueFor<S, TN, K>
 };
 
+// Extractor helpers: infer the row type from a SelectQuery or TypedSqlRequest
+export type RowOfSelect<Q> = Q extends SelectQuery<any, any, infer R> ? R : never;
+export type RowsOfSelect<Q> = RowOfSelect<Q>[];
+
+export type RowOfRequest<Rq> = Rq extends PgTypes.TypedSqlRequest<infer R> ? R : never;
+export type RowsOfRequest<Rq> = RowOfRequest<Rq>[];
+
 export interface TableQuery<S extends DBSchema, TN extends string> {
   // SELECT
   select(): SelectQuery<S, TN, RowForTable<S, TN>>;
