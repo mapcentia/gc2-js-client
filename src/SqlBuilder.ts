@@ -694,29 +694,29 @@ class TableQueryImpl<S extends DBSchema, TN extends string> implements TableQuer
             }
 
       andWhereOp<K extends ColumnNames<S, TN>, O extends WhereOperator>(col: K, op: O, ...args: OpArgsFor<S, TN, K, O>): SelectQuery<S, TN, any>;
-      andWhereOp(col: any, op: any, ...args: any[]): SelectQuery<S, TN> {
+      andWhereOp(col: any, op: any, ...args: any[]): SelectQuery<S, TN, any> {
         const value = args[0];
         this.s.andOps.push({ col, op, value });
         return this;
       }
-      orWhereOp<K extends ColumnNames<S, TN>, O extends WhereOperator>(col: K, op: O, ...args: OpArgsFor<S, TN, K, O>): SelectQuery<S, TN>;
-      orWhereOp(col: any, op: any, ...args: any[]): SelectQuery<S, TN> {
+      orWhereOp<K extends ColumnNames<S, TN>, O extends WhereOperator>(col: K, op: O, ...args: OpArgsFor<S, TN, K, O>): SelectQuery<S, TN, any>;
+      orWhereOp(col: any, op: any, ...args: any[]): SelectQuery<S, TN, any> {
         const value = args[0];
         this.s.orOpGroups.push([{ col, op, value }]);
         return this;
       }
-      andWhereOpGroup(predicates: ReadonlyArray<OpPredicate<S, TN>>): SelectQuery<S, TN> {
+      andWhereOpGroup(predicates: ReadonlyArray<OpPredicate<S, TN>>): SelectQuery<S, TN, any> {
         const group = (predicates as ReadonlyArray<readonly [ColumnNames<S, TN>, WhereOperator, unknown?]>).map(p => ({ col: p[0], op: p[1], value: p[2] }));
         for (const g of group) this.s.andOps.push(g);
         return this;
       }
-      orWhereOpGroup(predicates: ReadonlyArray<OpPredicate<S, TN>>): SelectQuery<S, TN> {
+      orWhereOpGroup(predicates: ReadonlyArray<OpPredicate<S, TN>>): SelectQuery<S, TN, any> {
         const group = (predicates as ReadonlyArray<readonly [ColumnNames<S, TN>, WhereOperator, unknown?]>).map(p => ({ col: p[0], op: p[1], value: p[2] }));
         this.s.orOpGroups.push(group);
         return this;
       }
 
-      orderBy(order: ReadonlyArray<readonly [ColumnNames<S, TN>, "asc" | "desc"]> | ColumnNames<S, TN>): SelectQuery<S, TN> {
+      orderBy(order: ReadonlyArray<readonly [ColumnNames<S, TN>, "asc" | "desc"]> | ColumnNames<S, TN>): SelectQuery<S, TN, any> {
         this.s.order = [];
         const isValidDir = (d: string): d is "asc" | "desc" => d === "asc" || d === "desc";
         if (typeof order === "string") {
@@ -739,7 +739,7 @@ class TableQueryImpl<S extends DBSchema, TN extends string> implements TableQuer
         return this;
       }
 
-      limit(n: number): SelectQuery<S, TN> {
+      limit(n: number): SelectQuery<S, TN, any> {
         // Runtime validation: limit must be a non-negative integer
         if (typeof n !== "number" || !Number.isFinite(n) || !Number.isInteger(n) || n < 0) {
           throw new Error(`Invalid limit: ${n}. Limit must be a non-negative integer`);
@@ -747,7 +747,7 @@ class TableQueryImpl<S extends DBSchema, TN extends string> implements TableQuer
         this.s.limit = n;
         return this;
       }
-      offset(n: number): SelectQuery<S, TN> {
+      offset(n: number): SelectQuery<S, TN, any> {
         // Runtime validation: offset must be a non-negative integer
         if (typeof n !== "number" || !Number.isFinite(n) || !Number.isInteger(n) || n < 0) {
           throw new Error(`Invalid offset: ${n}. Offset must be a non-negative integer`);
@@ -756,7 +756,7 @@ class TableQueryImpl<S extends DBSchema, TN extends string> implements TableQuer
         return this;
       }
 
-      join<JT extends TableNames<S>>(tableName: JT, type: "inner" | "left" | "right" | "full" = "inner"): SelectQuery<S, TN> {
+      join<JT extends TableNames<S>>(tableName: JT, type: "inner" | "left" | "right" | "full" = "inner"): SelectQuery<S, TN, any> {
         const target = findTable(schema, String(tableName));
 
         // Determine the source table to join from: try most recent join targets first, then earlier ones, then base table
