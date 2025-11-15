@@ -42,6 +42,6 @@ export type {
     PgTypes,
 }
 
-export type { DBSchema, TableDef, ColumnDef } from "./SqlBuilder";
+export type { DBSchema, TableDef, ColumnDef, RowForTable, PickRow, RowOfSelect, RowsOfSelect, RowOfRequest, RowsOfRequest } from "./SqlBuilder";
 
 
