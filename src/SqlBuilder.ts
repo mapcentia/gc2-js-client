@@ -34,42 +34,40 @@ export interface DBSchema {
   tables: readonly TableDef[];
 }
 
-// ---------- Type helpers (best effort) ----------
-// Map Postgres typname -> TypeScript value types used by PgTypes
 export type ScalarFromTypename<T extends string> =
-  // Numeric
-  T extends "int2" | "int4" | "int8" ? number :
-  T extends "float4" | "float8" ? number :
-  T extends "numeric" | "decimal" ? PgTypes.NumericString :
-  // Character
-  T extends "varchar" | "text" | "bpchar" | "char" ? string :
-  // Boolean
-  T extends "bool" ? PgTypes.PgBoolean :
-  // JSON
-  T extends "json" | "jsonb" ? PgTypes.JsonValue :
-  // Date/Time
-  T extends "date" ? PgTypes.DateString :
-  T extends "time" ? PgTypes.TimeString :
-  T extends "timetz" ? PgTypes.TimetzString :
-  T extends "timestamp" ? PgTypes.TimestampString :
-  T extends "timestamptz" ? PgTypes.TimestamptzString :
-  T extends "interval" ? PgTypes.IntervalValue :
-  // Geometric
-  T extends "point" ? PgTypes.Point :
-  T extends "line" ? PgTypes.Line :
-  T extends "lseg" ? PgTypes.Lseg :
-  T extends "box" ? PgTypes.Box :
-  T extends "path" ? PgTypes.Path :
-  T extends "polygon" ? PgTypes.Polygon :
-  T extends "circle" ? PgTypes.Circle :
-  // Ranges
-  T extends "int4range" ? PgTypes.Int4Range :
-  T extends "int8range" ? PgTypes.Int8Range :
-  T extends "numrange" ? PgTypes.NumRange :
-  T extends "tsrange" ? PgTypes.TsRange :
-  T extends "tstzrange" ? PgTypes.TstzRange :
-  T extends "daterange" ? PgTypes.DateRange :
-  unknown;
+// Numeric
+    T extends "int2" | "int4" | "int8" ? number :
+        T extends "float4" | "float8" ? number :
+            T extends "numeric" | "decimal" ? PgTypes.NumericString :
+                // Character
+                T extends "varchar" | "text" | "bpchar" | "char" ? string :
+                    // Boolean
+                    T extends "bool" ? PgTypes.PgBoolean :
+                        // JSON
+                        T extends "json" | "jsonb" ? PgTypes.JsonValue :
+                            // Date/Time
+                            T extends "date" ? PgTypes.DateString :
+                                T extends "time" ? PgTypes.TimeString :
+                                    T extends "timetz" ? PgTypes.TimetzString :
+                                        T extends "timestamp" ? PgTypes.TimestampString :
+                                            T extends "timestamptz" ? PgTypes.TimestamptzString :
+                                                T extends "interval" ? PgTypes.IntervalValue :
+                                                    // Geometric
+                                                    T extends "point" ? PgTypes.Point :
+                                                        T extends "line" ? PgTypes.Line :
+                                                            T extends "lseg" ? PgTypes.Lseg :
+                                                                T extends "box" ? PgTypes.Box :
+                                                                    T extends "path" ? PgTypes.Path :
+                                                                        T extends "polygon" ? PgTypes.Polygon :
+                                                                            T extends "circle" ? PgTypes.Circle :
+                                                                                // Ranges
+                                                                                T extends "int4range" ? PgTypes.Int4Range :
+                                                                                    T extends "int8range" ? PgTypes.Int8Range :
+                                                                                        T extends "numrange" ? PgTypes.NumRange :
+                                                                                            T extends "tsrange" ? PgTypes.TsRange :
+                                                                                                T extends "tstzrange" ? PgTypes.TstzRange :
+                                                                                                    T extends "daterange" ? PgTypes.DateRange :
+                                                                                                        string;
 
 // If schema object is declared with `as const`, these produce better types.
 export type TableNames<S extends DBSchema> = S["tables"][number]["name"];

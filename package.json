@@ -1,6 +1,6 @@
 {
   "name": "@centia-io/sdk",
-  "version": "0.0.34",
+  "version": "0.0.36",
   "description": "Centia-io TypeScript SDK",
   "author": "Martin Høgh",
   "license": "MIT",
@@ -16,7 +16,8 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsdown --watch"
+    "build": "tsdown",
+    "build-watch": "tsdown --watch"
   },
   "devDependencies": {
     "tsdown": "^0.15.7",
