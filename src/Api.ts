@@ -5,6 +5,37 @@ type MethodsOf<T> = {
     [K in keyof T]: T[K] extends (...args: infer A) => infer R ? (...args: A) => R : never;
 };
 
+// Extractor helpers for createApi(): infer the row/item type returned by a method
+// Use with a method type, e.g. RowOfApiCall<typeof api["getUsers"]>
+export type RowOfApiCall<F> = F extends (...args: any[]) => Promise<infer R>
+    ? R extends ReadonlyArray<infer E>
+        ? E
+        : R
+    : never;
+export type RowsOfApiCall<F> = F extends (...args: any[]) => Promise<infer R>
+    ? R extends ReadonlyArray<infer E>
+        ? E[]
+        : R[]
+    : never;
+
+// Use with an API interface or an api instance and a key, e.g.
+// type Row = RowOfApiMethod<Api, "typeTest">;
+// or
+// type Row = RowOfApiMethod<typeof api, "typeTest">;
+export type RowOfApiMethod<A, K extends keyof A> = A[K] extends (...args: any[]) => Promise<infer R>
+    ? R extends ReadonlyArray<infer E>
+        ? E
+        : R
+    : never;
+export type RowsOfApiMethod<A, K extends keyof A> = A[K] extends (...args: any[]) => Promise<infer R>
+    ? R extends ReadonlyArray<infer E>
+        ? E[]
+        : R[]
+    : never;
+
+// Extract the first parameter type for a given API method key
+export type ParamsOfApiMethod<A, K extends keyof A> = A[K] extends (...args: infer P) => any ? P[0] : never;
+
 function isPlainObject(v: unknown): v is Record<string, unknown> {
     return typeof v === "object" && v !== null && !Array.isArray(v);
 }
