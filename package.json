@@ -20,15 +20,15 @@
     "build-watch": "tsdown --watch"
   },
   "devDependencies": {
-    "tsdown": "^0.15.7",
+    "tsdown": "^0.17.3",
     "typescript": "^5.6.3"
   },
   "private": false,
   "publishConfig": {
     "exports": {
       ".": {
-        "import": "./dist/centia-io-sdk.js",
-        "require": "./dist/centia-io-sdk.cjs"
+        "require": "./dist/centia-io-sdk.cjs",
+        "import": "./dist/centia-io-sdk.js"
       },
       "./package.json": "./package.json"
     }
