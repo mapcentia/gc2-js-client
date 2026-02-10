@@ -16,7 +16,8 @@ export default class PasswordFlow {
         setOptions({
             clientId: this.options.clientId,
             host: this.options.host,
-            redirectUri: ''
+            redirectUri: '',
+            clientSecret: this.options.clientSecret,
         })
     }
 
