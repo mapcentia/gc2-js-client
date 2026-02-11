@@ -20,7 +20,7 @@ import Tables from "./Tables"
 import createApi from "./Api"
 import SignUp from "./SignUp"
 import { createSqlBuilder } from "./SqlBuilder"
-import type {RpcRequest, RpcResponse, GraphqlRequest, GraphqlResponse, SqlRequest, SqlResponse} from "./types/pgTypes"
+import type {RpcRequest, RpcResponse, GqlRequest, GqlResponse, SqlRequest, SqlResponse} from "./types/pgTypes"
 import type * as PgTypes from "./types/pgTypes"
 import type {Options, CodeFlowOptions, PasswordFlowOptions} from "./util/utils"
 
@@ -47,8 +47,8 @@ export type {
     RpcResponse,
     SqlRequest,
     SqlResponse,
-    GraphqlRequest,
-    GraphqlResponse,
+    GqlRequest,
+    GqlResponse,
     Options,
     CodeFlowOptions,
     PasswordFlowOptions,

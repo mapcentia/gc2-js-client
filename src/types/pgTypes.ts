@@ -112,14 +112,14 @@ export interface RpcRequest<Params extends Record<string, unknown> = Record<stri
     id?: number|string
 }
 
-export interface GraphqlRequest {
+export interface GqlRequest {
     query: string
     variables?: Record<string, unknown>
     operationName?: string
     extensions?: Record<string, unknown>
 }
 
-export interface GraphqlResponse {
+export interface GqlResponse {
     data?: Record<string, unknown>
     errors?: Array<{ message: string }>
 }
