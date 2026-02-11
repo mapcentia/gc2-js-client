@@ -9,9 +9,13 @@ import make from "./util/make-request";
 import get from "./util/get-response";
 import {GqlRequest, GqlResponse} from "./types/pgTypes";
 
-export default class GraphQL {
+export default class Gql {
+    private schema: string
+    constructor(schema: string) {
+        this.schema = schema;
+    }
     async request(request: GqlRequest): Promise<GqlResponse> {
-        const response = await make(null, `graphql/schema/public`, 'POST', request)
+        const response = await make(null, `graphql/schema/${this.schema}`, 'POST', request)
         return await get(response, 200)
     }
 }

@@ -9,7 +9,7 @@ import CodeFlow from "./CodeFlow"
 import PasswordFlow from "./PasswordFlow"
 import Sql from "./Sql"
 import Rpc from "./Rpc"
-import GraphQL from "./GraphQL"
+import Gql from "./Gql.ts"
 import Meta from "./Meta"
 import Status from "./Status"
 import Claims from "./Claims"
@@ -29,7 +29,7 @@ export {
     PasswordFlow,
     Sql,
     Rpc,
-    GraphQL,
+    Gql,
     Meta,
     Status,
     Claims,
