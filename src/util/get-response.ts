@@ -1,3 +1,10 @@
+/**
+ * @author     Martin Høgh <mh@mapcentia.com>
+ * @copyright  2013-2026 MapCentia ApS
+ * @license    https://opensource.org/license/mit  The MIT License
+ *
+ */
+
 const get = async (response: Response, expectedCode: number): Promise<any> => {
   let res: any = null
     let bodyText = ''

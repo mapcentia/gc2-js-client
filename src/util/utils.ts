@@ -1,3 +1,10 @@
+/**
+ * @author     Martin Høgh <mh@mapcentia.com>
+ * @copyright  2013-2026 MapCentia ApS
+ * @license    https://opensource.org/license/mit  The MIT License
+ *
+ */
+
 import {jwtDecode} from './jwt-decode'
 import {Gc2Service} from "../services/gc2.services"
 import {getStorage} from './storage'
@@ -177,7 +184,8 @@ export const setOptions = (options: CodeFlowOptions): void => {
     getStorage().setItem('gc2_options', JSON.stringify({
                 'clientId': options.clientId,
                 'host': options.host,
-                'redirectUri': options.redirectUri
+                'redirectUri': options.redirectUri,
+                'clientSecret': options.clientSecret || null,
             }
         )
     )

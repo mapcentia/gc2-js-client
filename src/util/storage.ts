@@ -1,3 +1,10 @@
+/**
+ * @author     Martin Høgh <mh@mapcentia.com>
+ * @copyright  2013-2026 MapCentia ApS
+ * @license    https://opensource.org/license/mit  The MIT License
+ *
+ */
+
 export interface StorageLike {
   getItem(key: string): string | null
   setItem(key: string, value: string): void

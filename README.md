@@ -152,7 +152,7 @@ Notes:
 Execute parameterized SQL against GC2.
 
 - Class: `new Sql()`
-- Method: `exec(request: SqlRequest): Promise<SQLResponse>`
+- Method: `exec(request: SqlRequest): Promise<SqlResponse>`
 - Endpoint: `POST https://api.centia.io/api/v4/sql`
 
 Types (simplified):
@@ -161,7 +161,7 @@ Types (simplified):
     - `params?`: object with values for placeholders
     - `type_hints?`: optional explicit type hints
     - `type_formats?`: optional per-column format strings
-- `SQLResponse` has:
+- `SqlResponse` has:
     - `schema`: a map of column name -> `{ type: string, array: boolean }`
     - `data`: an array of rows (records)
 
@@ -201,8 +201,8 @@ interface Row extends PgTypes.DataRow {
   e: PgTypes.JsonValue;
 }
 
-// res: PgTypes.SQLResponse<Row>
-const res = await sql.exec({ q: "...", params: payload }) as PgTypes.SQLResponse<Row>;
+// res: PgTypes.SqlResponse<Row>
+const res = await sql.exec({ q: "...", params: payload }) as PgTypes.SqlResponse<Row>;
 ```
 
 ## SQL Builder

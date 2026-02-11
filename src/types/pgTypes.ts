@@ -1,5 +1,8 @@
 /**
- * These types model the request/response payloads and complex values
+ * @author     Martin Høgh <mh@mapcentia.com>
+ * @copyright  2013-2026 MapCentia ApS
+ * @license    https://opensource.org/license/mit  The MIT License
+ *
  */
 
 // ------------------------------
@@ -91,6 +94,11 @@ export interface SqlRequest<Params extends Record<string, unknown> = Record<stri
     type_formats?: Record<string, string>; // e.g. { my_timestamp: "l jS Y \\a\\t H:i:s" }
 }
 
+export interface SqlResponse<Row extends DataRow = DataRow> {
+    schema: Record<string, ColumnSchemaMeta>;
+    data: Row[];
+}
+
 // Phantom-typed request that carries the expected row type at compile time only
 export interface TypedSqlRequest<Row extends DataRow, Params extends Record<string, unknown> = Record<string, unknown>> extends SqlRequest<Params> {
     // This property is never set at runtime; it exists only to carry the Row type
@@ -102,6 +110,18 @@ export interface RpcRequest<Params extends Record<string, unknown> = Record<stri
     method: string
     params?: Params
     id?: number|string
+}
+
+export interface GraphqlRequest {
+    query: string
+    variables?: Record<string, unknown>
+    operationName?: string
+    extensions?: Record<string, unknown>
+}
+
+export interface GraphqlResponse {
+    data?: Record<string, unknown>
+    errors?: Array<{ message: string }>
 }
 
 export interface ColumnSchemaMeta {
@@ -137,11 +157,6 @@ export type RowValue =
     | null;
 
 export type DataRow = Record<string, RowValue>;
-
-export interface SQLResponse<Row extends DataRow = DataRow> {
-    schema: Record<string, ColumnSchemaMeta>;
-    data: Row[];
-}
 
 export interface RpcResponse<Row extends DataRow = DataRow> {
     jsonrpc: "2.0"
