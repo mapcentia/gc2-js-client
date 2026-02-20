@@ -17,6 +17,7 @@ export type Options = {
     deviceUri?: string
     scope?: string
     clientId: string
+    clientSecret?: string
 }
 
 export type CodeFlowOptions = Options & {
