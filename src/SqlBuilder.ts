@@ -525,7 +525,7 @@ export type PickRow<S extends DBSchema, TN extends string, C extends ReadonlyArr
 };
 
 // Extractor helpers: infer the row type from a SelectQuery or TypedSqlRequest
-export type RowOfSelect<Q> = Q extends SelectQuery<any, any, infer R> ? R : never;
+export type RowOfSelect<Q> = Q extends { toSql: () => PgTypes.TypedSqlRequest<infer R> } ? R : never;
 export type RowsOfSelect<Q> = RowOfSelect<Q>[];
 
 export type RowOfRequest<Rq> = Rq extends PgTypes.TypedSqlRequest<infer R> ? R : never;
@@ -562,23 +562,48 @@ export interface SelectQuery<S extends DBSchema, TN extends string, R extends Pg
   toSql: () => PgTypes.TypedSqlRequest<R>;
 }
 
+export interface InsertReturningQuery<S extends DBSchema, TN extends string, R extends PgTypes.DataRow> {
+  returning(): InsertReturningQuery<S, TN, RowForTable<S, TN>>;
+  returning<C extends ReadonlyArray<ColumnNames<S, TN>>>(cols: C): InsertReturningQuery<S, TN, PickRow<S, TN, C>>;
+  toSql(): PgTypes.TypedSqlRequest<R>;
+}
+
+export interface UpdateReturningQuery<S extends DBSchema, TN extends string, R extends PgTypes.DataRow> {
+  where: (where: WhereForTable<S, TN>) => UpdateReturningQuery<S, TN, R>;
+  wherePk: (pk: PrimaryKeyValue<S, TN>) => UpdateReturningQuery<S, TN, R>;
+  returning(): UpdateReturningQuery<S, TN, RowForTable<S, TN>>;
+  returning<C extends ReadonlyArray<ColumnNames<S, TN>>>(cols: C): UpdateReturningQuery<S, TN, PickRow<S, TN, C>>;
+  toSql(): PgTypes.TypedSqlRequest<R>;
+}
+
+export interface DeleteReturningQuery<S extends DBSchema, TN extends string, R extends PgTypes.DataRow> {
+  where: (where: WhereForTable<S, TN>) => DeleteReturningQuery<S, TN, R>;
+  wherePk: (pk: PrimaryKeyValue<S, TN>) => DeleteReturningQuery<S, TN, R>;
+  returning(): DeleteReturningQuery<S, TN, RowForTable<S, TN>>;
+  returning<C extends ReadonlyArray<ColumnNames<S, TN>>>(cols: C): DeleteReturningQuery<S, TN, PickRow<S, TN, C>>;
+  toSql(): PgTypes.TypedSqlRequest<R>;
+}
+
 export interface InsertQuery<S extends DBSchema, TN extends string> {
-  returning: (cols?: ReadonlyArray<ColumnNames<S, TN>>) => InsertQuery<S, TN>;
-  toSql: () => SqlRequest<Record<string, unknown>>;
+  returning(): InsertReturningQuery<S, TN, RowForTable<S, TN>>;
+  returning<C extends ReadonlyArray<ColumnNames<S, TN>>>(cols: C): InsertReturningQuery<S, TN, PickRow<S, TN, C>>;
+  toSql(): SqlRequest<Record<string, unknown>>;
 }
 
 export interface UpdateQuery<S extends DBSchema, TN extends string> {
   where: (where: WhereForTable<S, TN>) => UpdateQuery<S, TN>;
   wherePk: (pk: PrimaryKeyValue<S, TN>) => UpdateQuery<S, TN>;
-  returning: (cols?: ReadonlyArray<ColumnNames<S, TN>>) => UpdateQuery<S, TN>;
-  toSql: () => SqlRequest<Record<string, unknown>>;
+  returning(): UpdateReturningQuery<S, TN, RowForTable<S, TN>>;
+  returning<C extends ReadonlyArray<ColumnNames<S, TN>>>(cols: C): UpdateReturningQuery<S, TN, PickRow<S, TN, C>>;
+  toSql(): SqlRequest<Record<string, unknown>>;
 }
 
 export interface DeleteQuery<S extends DBSchema, TN extends string> {
   where: (where: WhereForTable<S, TN>) => DeleteQuery<S, TN>;
   wherePk: (pk: PrimaryKeyValue<S, TN>) => DeleteQuery<S, TN>;
-  returning: (cols?: ReadonlyArray<ColumnNames<S, TN>>) => DeleteQuery<S, TN>;
-  toSql: () => SqlRequest<Record<string, unknown>>;
+  returning(): DeleteReturningQuery<S, TN, RowForTable<S, TN>>;
+  returning<C extends ReadonlyArray<ColumnNames<S, TN>>>(cols: C): DeleteReturningQuery<S, TN, PickRow<S, TN, C>>;
+  toSql(): SqlRequest<Record<string, unknown>>;
 }
 
 class TableQueryImpl<S extends DBSchema, TN extends string> implements TableQuery<S, TN> {
@@ -1046,11 +1071,20 @@ class TableQueryImpl<S extends DBSchema, TN extends string> implements TableQuer
     const schema = this.schema;
     const state = { values, returning: [] as ColumnNames<S, TN>[] };
 
-    return new (class implements InsertQuery<S, TN> {
-      returning = (cols?: ReadonlyArray<ColumnNames<S, TN>>) => { state.returning = (cols as ColumnNames<S, TN>[] | undefined) || []; return this; };
+    return new (class implements InsertQuery<S, TN>, InsertReturningQuery<S, TN, any> {
+      // returning overloads
+      returning(): InsertReturningQuery<S, TN, RowForTable<S, TN>>;
+      returning<C extends ReadonlyArray<ColumnNames<S, TN>>>(cols: C): InsertReturningQuery<S, TN, PickRow<S, TN, C>>;
+      returning(cols?: ReadonlyArray<ColumnNames<S, TN>>): any {
+        state.returning = (cols as ColumnNames<S, TN>[] | undefined) || [];
+        return this as any;
+      }
 
-      toSql = (): SqlRequest => {
-        const cols: string[] = [];
+      // toSql overloads: untyped when no returning, typed when returning
+      toSql(): SqlRequest<Record<string, unknown>>;
+      toSql(): PgTypes.TypedSqlRequest<any>;
+      toSql(): any {
+        const colsArr: string[] = [];
         const vals: string[] = [];
         const params: Record<string, unknown> = {};
         const type_hints: Record<string, string> = {};
@@ -1061,22 +1095,23 @@ class TableQueryImpl<S extends DBSchema, TN extends string> implements TableQuer
           const col = findColumn(table, key);
           p += 1;
           const paramName = `${table.name}_${key}_${p}`;
-          cols.push(`"${key}"`);
+          colsArr.push(`"${key}"`);
           vals.push(`:${paramName}`);
           params[paramName] = value;
           addTypeHintForParam(type_hints, paramName, col, value);
         }
 
         const parts: string[] = [];
-        parts.push(`insert into "${schema.name}"."${table.name}" (${cols.join(", ")}) values (${vals.join(", ")})`);
+        parts.push(`insert into "${schema.name}"."${table.name}" (${colsArr.join(", ")}) values (${vals.join(", ")})`);
         if (state.returning.length) parts.push("returning " + state.returning.join(", "));
 
-        return {
+        const req = {
           q: parts.join(" "),
           params : Object.keys(params).length > 0 ? params: undefined,
           type_hints: Object.keys(type_hints).length ? type_hints : undefined,
         };
-      };
+        return state.returning.length ? (req as PgTypes.TypedSqlRequest<any>) : (req as SqlRequest<Record<string, unknown>>);
+      }
     })();
   }
 
@@ -1085,7 +1120,7 @@ class TableQueryImpl<S extends DBSchema, TN extends string> implements TableQuer
     const schema = this.schema;
     const state = { values, where: {} as WhereForTable<S, TN>, returning: [] as ColumnNames<S, TN>[] };
 
-    return new (class implements UpdateQuery<S, TN> {
+    return new (class implements UpdateQuery<S, TN>, UpdateReturningQuery<S, TN, any> {
       where = (w: WhereForTable<S, TN>) => { for (const k in w as Record<string, unknown>) state.where[k as keyof typeof w] = (w as any)[k]; return this; };
       wherePk = (pk: PrimaryKeyValue<S, TN>) => {
         const pkCols = getPrimaryKeyColumns(table);
@@ -1116,9 +1151,19 @@ class TableQueryImpl<S extends DBSchema, TN extends string> implements TableQuer
         }
         return this;
       };
-      returning = (cols?: ReadonlyArray<ColumnNames<S, TN>>) => { state.returning = (cols as ColumnNames<S, TN>[] | undefined) || []; return this; };
 
-      toSql = (): SqlRequest => {
+      // returning overloads
+      returning(): UpdateReturningQuery<S, TN, RowForTable<S, TN>>;
+      returning<C extends ReadonlyArray<ColumnNames<S, TN>>>(cols: C): UpdateReturningQuery<S, TN, PickRow<S, TN, C>>;
+      returning(cols?: ReadonlyArray<ColumnNames<S, TN>>): any {
+        state.returning = (cols as ColumnNames<S, TN>[] | undefined) || [];
+        return this as any;
+      }
+
+      // toSql overloads
+      toSql(): SqlRequest<Record<string, unknown>>;
+      toSql(): PgTypes.TypedSqlRequest<any>;
+      toSql(): any {
         const params: Record<string, unknown> = {};
         const type_hints: Record<string, string> = {};
         let p = 0;
@@ -1165,12 +1210,13 @@ class TableQueryImpl<S extends DBSchema, TN extends string> implements TableQuer
         if (whereClauses.length) parts.push("where " + whereClauses.join(" and "));
         if (state.returning.length) parts.push("returning " + state.returning.join(", "));
 
-        return {
+        const req = {
           q: parts.join(" "),
             params : Object.keys(params).length > 0 ? params: undefined,
           type_hints: Object.keys(type_hints).length ? type_hints : undefined,
         };
-      };
+        return state.returning.length ? (req as PgTypes.TypedSqlRequest<any>) : (req as SqlRequest<Record<string, unknown>>);
+      }
     })();
   }
 
@@ -1179,7 +1225,7 @@ class TableQueryImpl<S extends DBSchema, TN extends string> implements TableQuer
     const schema = this.schema;
     const state = { where: {} as WhereForTable<S, TN>, returning: [] as ColumnNames<S, TN>[] };
 
-    return new (class implements DeleteQuery<S, TN> {
+    return new (class implements DeleteQuery<S, TN>, DeleteReturningQuery<S, TN, any> {
       where = (w: WhereForTable<S, TN>) => { for (const k in w as Record<string, unknown>) state.where[k as keyof typeof w] = (w as any)[k]; return this; };
       wherePk = (pk: PrimaryKeyValue<S, TN>) => {
         const pkCols = getPrimaryKeyColumns(table);
@@ -1201,9 +1247,19 @@ class TableQueryImpl<S extends DBSchema, TN extends string> implements TableQuer
         }
         return this;
       };
-      returning = (cols?: ReadonlyArray<ColumnNames<S, TN>>) => { state.returning = (cols as ColumnNames<S, TN>[] | undefined) || []; return this; };
 
-      toSql = (): SqlRequest => {
+      // returning overloads
+      returning(): DeleteReturningQuery<S, TN, RowForTable<S, TN>>;
+      returning<C extends ReadonlyArray<ColumnNames<S, TN>>>(cols: C): DeleteReturningQuery<S, TN, PickRow<S, TN, C>>;
+      returning(cols?: ReadonlyArray<ColumnNames<S, TN>>): any {
+        state.returning = (cols as ColumnNames<S, TN>[] | undefined) || [];
+        return this as any;
+      }
+
+      // toSql overloads
+      toSql(): SqlRequest<Record<string, unknown>>;
+      toSql(): PgTypes.TypedSqlRequest<any>;
+      toSql(): any {
         const params: Record<string, unknown> = {};
         const type_hints: Record<string, string> = {};
         let p = 0;
@@ -1239,12 +1295,13 @@ class TableQueryImpl<S extends DBSchema, TN extends string> implements TableQuer
         if (whereClauses.length) parts.push("where " + whereClauses.join(" and "));
         if (state.returning.length) parts.push("returning " + state.returning.join(", "));
 
-        return {
+        const req = {
           q: parts.join(" "),
           params : Object.keys(params).length > 0 ? params: undefined,
           type_hints: Object.keys(type_hints).length ? type_hints : undefined,
         };
-      };
+        return state.returning.length ? (req as PgTypes.TypedSqlRequest<any>) : (req as SqlRequest<Record<string, unknown>>);
+      }
     })();
   }
 }
