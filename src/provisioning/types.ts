@@ -228,3 +228,48 @@ export interface UserInfo {
   user_group?: string;
   properties?: unknown;
 }
+
+// ===== OAuth Client types =====
+
+export interface CreateClientRequest {
+  name: string;
+  id?: string;
+  description?: string | null;
+  redirect_uri?: string[];
+  homepage?: string;
+  public?: boolean;
+  confirm?: boolean;
+  two_factor?: boolean;
+  allow_signup?: boolean;
+  social_signup?: boolean;
+}
+
+export interface PatchClientRequest {
+  name?: string;
+  description?: string | null;
+  redirect_uri?: string[];
+  homepage?: string;
+  public?: boolean;
+  confirm?: boolean;
+  two_factor?: boolean;
+  allow_signup?: boolean;
+  social_signup?: boolean;
+}
+
+export interface CreateClientResponse {
+  location: string;
+  secret: string;
+}
+
+export interface ClientInfo {
+  id: string;
+  name: string;
+  description: string | null;
+  redirect_uri: string[];
+  homepage: string;
+  public: boolean;
+  confirm: boolean;
+  two_factor: boolean;
+  allow_signup: boolean;
+  social_signup: boolean;
+}

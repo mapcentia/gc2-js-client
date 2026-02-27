@@ -10,6 +10,7 @@ export { default as Constraints } from './Constraints';
 export { default as Indices } from './Indices';
 export { default as Sequences } from './Sequences';
 export { default as ProvisioningUsers } from './Users';
+export { default as ProvisioningClients } from './Clients';
 
 export type {
   // Shared
@@ -47,4 +48,9 @@ export type {
   CreateUserRequest,
   PatchUserRequest,
   UserInfo,
+  // Client
+  CreateClientRequest,
+  PatchClientRequest,
+  CreateClientResponse,
+  ClientInfo,
 } from './types';
