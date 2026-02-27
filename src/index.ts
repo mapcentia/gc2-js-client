@@ -82,6 +82,9 @@ export type {
     CreateSequenceRequest,
     PatchSequenceRequest,
     SequenceInfo,
+    CreateUserRequest,
+    PatchUserRequest,
+    UserInfo,
 } from "./provisioning";
 export type { DBSchema, TableDef, ColumnDef, RowForTable, PickRow, RowOfSelect, RowsOfSelect, RowOfRequest, RowsOfRequest } from "./SqlBuilder";
 export type { RowOfApiCall, RowsOfApiCall, RowOfApiMethod, RowsOfApiMethod, ParamsOfApiMethod } from "./Api";

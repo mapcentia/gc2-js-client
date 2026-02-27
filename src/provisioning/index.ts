@@ -9,6 +9,7 @@ export { default as Columns } from './Columns';
 export { default as Constraints } from './Constraints';
 export { default as Indices } from './Indices';
 export { default as Sequences } from './Sequences';
+export { default as ProvisioningUsers } from './Users';
 
 export type {
   // Shared
@@ -42,4 +43,8 @@ export type {
   CreateSequenceRequest,
   PatchSequenceRequest,
   SequenceInfo,
+  // User
+  CreateUserRequest,
+  PatchUserRequest,
+  UserInfo,
 } from './types';

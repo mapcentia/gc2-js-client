@@ -202,3 +202,29 @@ export interface SequenceInfo {
   cache_size: number;
   owned_by?: string;
 }
+
+// ===== User types =====
+
+export interface CreateUserRequest {
+  name: string;
+  email: string;
+  password: string;
+  default_user?: boolean;
+  properties?: unknown;
+}
+
+export interface PatchUserRequest {
+  email: string;
+  password: string | null;
+  default_user?: boolean;
+  properties?: unknown;
+  user_group?: string;
+}
+
+export interface UserInfo {
+  name: string;
+  email: string;
+  default_user: boolean;
+  user_group?: string;
+  properties?: unknown;
+}

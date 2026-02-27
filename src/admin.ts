@@ -12,12 +12,13 @@ import Constraints from './provisioning/Constraints';
 import Indices from './provisioning/Indices';
 import Sequences from './provisioning/Sequences';
 import ProvisioningTables from './provisioning/Tables';
+import ProvisioningUsers from './provisioning/Users';
 
 /** Admin client providing access to all provisioning operations. */
 export interface CentiaAdminClient {
   /** The underlying HTTP client. */
   readonly http: CentiaHttpClient;
-  /** Schema, table, column, constraint, index, and sequence management. */
+  /** Schema, table, column, constraint, index, sequence, and user management. */
   readonly provisioning: {
     readonly schemas: Schemas;
     readonly tables: ProvisioningTables;
@@ -25,6 +26,7 @@ export interface CentiaAdminClient {
     readonly constraints: Constraints;
     readonly indices: Indices;
     readonly sequences: Sequences;
+    readonly users: ProvisioningUsers;
   };
 }
 
@@ -51,6 +53,7 @@ export function createCentiaAdminClient(config: CentiaClientConfig): CentiaAdmin
       constraints: new Constraints(http),
       indices: new Indices(http),
       sequences: new Sequences(http),
+      users: new ProvisioningUsers(http),
     },
   };
 }
