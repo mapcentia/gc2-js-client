@@ -89,7 +89,7 @@ export type PgArray<T> = T[];
 // ------------------------------
 export interface SqlRequest<Params extends Record<string, unknown> = Record<string, unknown>> {
     q: string;
-    params?: Params;
+    params?: Params[];
     type_hints?: Record<string, string>;   // e.g. { my_tsrange: "tsrange[]" }
     type_formats?: Record<string, string>; // e.g. { my_timestamp: "l jS Y \\a\\t H:i:s" }
 }
@@ -108,7 +108,7 @@ export interface TypedSqlRequest<Row extends DataRow, Params extends Record<stri
 export interface RpcRequest<Params extends Record<string, unknown> = Record<string, unknown>> {
     jsonrpc: "2.0"
     method: string
-    params?: Params
+    params?: Params[]
     id?: number|string
 }
 

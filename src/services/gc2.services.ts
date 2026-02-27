@@ -185,6 +185,7 @@ export class Gc2Service {
             'POST',
             {
                 client_id: this.options.clientId,
+                client_secret: this.options.clientSecret,
                 grant_type: 'password',
                 username,
                 password,
