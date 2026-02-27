@@ -1,0 +1,56 @@
+/**
+ * @author     Martin Høgh <mh@mapcentia.com>
+ * @copyright  2013-2026 MapCentia ApS
+ * @license    https://opensource.org/license/mit  The MIT License
+ */
+
+import { CentiaHttpClient } from './http/client';
+import type { CentiaClientConfig } from './http/types';
+import Schemas from './provisioning/Schemas';
+import Columns from './provisioning/Columns';
+import Constraints from './provisioning/Constraints';
+import Indices from './provisioning/Indices';
+import Sequences from './provisioning/Sequences';
+import ProvisioningTables from './provisioning/Tables';
+
+/** Admin client providing access to all provisioning operations. */
+export interface CentiaAdminClient {
+  /** The underlying HTTP client. */
+  readonly http: CentiaHttpClient;
+  /** Schema, table, column, constraint, index, and sequence management. */
+  readonly provisioning: {
+    readonly schemas: Schemas;
+    readonly tables: ProvisioningTables;
+    readonly columns: Columns;
+    readonly constraints: Constraints;
+    readonly indices: Indices;
+    readonly sequences: Sequences;
+  };
+}
+
+/**
+ * Create a Centia admin client with access to provisioning operations.
+ *
+ * ```ts
+ * const client = createCentiaAdminClient({
+ *   baseUrl: 'https://example.centia.io',
+ *   auth: { getAccessToken: async () => token },
+ * });
+ *
+ * await client.provisioning.schemas.postSchema({ name: 'myschema' });
+ * ```
+ */
+export function createCentiaAdminClient(config: CentiaClientConfig): CentiaAdminClient {
+  const http = new CentiaHttpClient(config);
+  return {
+    http,
+    provisioning: {
+      schemas: new Schemas(http),
+      tables: new ProvisioningTables(http),
+      columns: new Columns(http),
+      constraints: new Constraints(http),
+      indices: new Indices(http),
+      sequences: new Sequences(http),
+    },
+  };
+}

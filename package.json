@@ -17,11 +17,14 @@
   ],
   "scripts": {
     "build": "tsdown",
-    "build-watch": "tsdown --watch"
+    "build-watch": "tsdown --watch",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "devDependencies": {
     "tsdown": "^0.17.3",
-    "typescript": "^5.6.3"
+    "typescript": "^5.6.3",
+    "vitest": "^4.0.18"
   },
   "private": false,
   "publishConfig": {

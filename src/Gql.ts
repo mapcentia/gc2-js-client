@@ -5,17 +5,24 @@
  *
  */
 
-import make from "./util/make-request";
-import get from "./util/get-response";
+import type { CentiaHttpClient } from "./http/client";
+import { getLegacyClient } from "./http/legacy";
 import {GqlRequest, GqlResponse} from "./types/pgTypes";
 
 export default class Gql {
     private schema: string
-    constructor(schema: string) {
+    private client: CentiaHttpClient;
+
+    constructor(schema: string, client?: CentiaHttpClient) {
         this.schema = schema;
+        this.client = client ?? getLegacyClient();
     }
+
     async request(request: GqlRequest): Promise<GqlResponse> {
-        const response = await make(null, `graphql/schema/${this.schema}`, 'POST', request)
-        return await get(response, 200)
+        return this.client.request({
+            path: `api/graphql/schema/${this.schema}`,
+            method: 'POST',
+            body: request,
+        });
     }
 }

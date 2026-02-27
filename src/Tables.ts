@@ -5,27 +5,44 @@
  *
  */
 
-import make from "./util/make-request";
-import get from "./util/get-response";
+import type { CentiaHttpClient } from "./http/client";
+import { getLegacyClient } from "./http/legacy";
 
 export default class Tables {
+    private client: CentiaHttpClient;
+
+    constructor(client?: CentiaHttpClient) {
+        this.client = client ?? getLegacyClient();
+    }
+
     async get(schema: string, table: string): Promise<any> {
-        const response = await make('4', `schemas/${encodeURIComponent(schema)}/tables/${encodeURIComponent(table)}`, 'GET', null)
-        return await get(response, 200)
+        return this.client.request({
+            path: `api/v4/schemas/${encodeURIComponent(schema)}/tables/${encodeURIComponent(table)}`,
+            method: 'GET',
+        });
     }
 
     async create(schema: string, table: string, payload: any): Promise<any> {
-        const response = await make('4', `schemas/${encodeURIComponent(schema)}/tables/${encodeURIComponent(table)}`, 'POST', payload)
-        return await get(response, 200)
+        return this.client.request({
+            path: `api/v4/schemas/${encodeURIComponent(schema)}/tables/${encodeURIComponent(table)}`,
+            method: 'POST',
+            body: payload,
+        });
     }
 
     async patch(schema: string, table: string, payload: any): Promise<any> {
-        const response = await make('4', `schemas/${encodeURIComponent(schema)}/tables/${encodeURIComponent(table)}`, 'PATCH', payload)
-        return await get(response, 200)
+        return this.client.request({
+            path: `api/v4/schemas/${encodeURIComponent(schema)}/tables/${encodeURIComponent(table)}`,
+            method: 'PATCH',
+            body: payload,
+        });
     }
 
     async delete(schema: string, table: string): Promise<any> {
-        const response = await make('4', `schemas/${encodeURIComponent(schema)}/tables/${encodeURIComponent(table)}`, 'DELETE', null)
-        return await get(response, 204)
+        return this.client.request({
+            path: `api/v4/schemas/${encodeURIComponent(schema)}/tables/${encodeURIComponent(table)}`,
+            method: 'DELETE',
+            expectedStatus: 204,
+        });
     }
 }

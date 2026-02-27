@@ -5,12 +5,20 @@
  *
  */
 
-import make from "./util/make-request";
-import get from "./util/get-response";
+import type { CentiaHttpClient } from "./http/client";
+import { getLegacyClient } from "./http/legacy";
 
 export default class Meta {
+    private client: CentiaHttpClient;
+
+    constructor(client?: CentiaHttpClient) {
+        this.client = client ?? getLegacyClient();
+    }
+
     async query(rel: string): Promise<any> {
-        const response = await make('4', `meta/${rel}`, 'GET', null)
-        return await get(response, 200)
+        return this.client.request({
+            path: `api/v4/meta/${rel}`,
+            method: 'GET',
+        });
     }
 }

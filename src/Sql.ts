@@ -5,18 +5,27 @@
  *
  */
 
-import make from "./util/make-request";
-import get from "./util/get-response";
+import type { CentiaHttpClient } from "./http/client";
+import { getLegacyClient } from "./http/legacy";
 import {SqlRequest, SqlResponse, DataRow, TypedSqlRequest} from "./types/pgTypes";
 
 export default class Sql {
+    private client: CentiaHttpClient;
+
+    constructor(client?: CentiaHttpClient) {
+        this.client = client ?? getLegacyClient();
+    }
+
     // Overload for typed request: preserves row typing
     async exec<R extends DataRow>(request: TypedSqlRequest<R>): Promise<SqlResponse<R>>;
     // Fallback overload: plain SqlRequest returns generic DataRow
     async exec(request: SqlRequest): Promise<SqlResponse<DataRow>>;
     // Implementation
     async exec(request: SqlRequest): Promise<SqlResponse<any>> {
-        const response = await make('4', `sql`, 'POST', request)
-        return await get(response, 200)
+        return this.client.request({
+            path: 'api/v4/sql',
+            method: 'POST',
+            body: request,
+        });
     }
 }

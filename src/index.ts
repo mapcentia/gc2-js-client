@@ -9,7 +9,7 @@ import CodeFlow from "./CodeFlow"
 import PasswordFlow from "./PasswordFlow"
 import Sql from "./Sql"
 import Rpc from "./Rpc"
-import Gql from "./Gql.ts"
+import Gql from "./Gql"
 import Meta from "./Meta"
 import Status from "./Status"
 import Claims from "./Claims"
@@ -20,6 +20,9 @@ import Tables from "./Tables"
 import createApi from "./Api"
 import SignUp from "./SignUp"
 import { createSqlBuilder } from "./SqlBuilder"
+import { createCentiaClient } from "./http/client"
+import { CentiaApiError, isCentiaApiError } from "./http/errors"
+import { createCentiaAdminClient } from "./admin"
 import type {RpcRequest, RpcResponse, GqlRequest, GqlResponse, SqlRequest, SqlResponse} from "./types/pgTypes"
 import type * as PgTypes from "./types/pgTypes"
 import type {Options, CodeFlowOptions, PasswordFlowOptions} from "./util/utils"
@@ -40,6 +43,10 @@ export {
     createApi,
     SignUp,
     createSqlBuilder,
+    createCentiaClient,
+    createCentiaAdminClient,
+    CentiaApiError,
+    isCentiaApiError,
 }
 
 export type {
@@ -55,7 +62,26 @@ export type {
     PgTypes,
 }
 
+export type { CentiaClientConfig, CentiaAuth, RequestOptions, FullResponse } from "./http/types";
+export type { CentiaApiErrorOptions } from "./http/errors";
+export type { CentiaHttpClient } from "./http/client";
+export type { CentiaAdminClient } from "./admin";
+export type {
+    LocationResponse,
+    CreateSchemaRequest,
+    RenameSchemaRequest,
+    GetSchemaOptions,
+    SchemaInfo,
+    CreateColumnRequest,
+    PatchColumnRequest,
+    ColumnInfo,
+    CreateConstraintRequest,
+    ConstraintInfo,
+    CreateIndexRequest,
+    IndexInfo,
+    CreateSequenceRequest,
+    PatchSequenceRequest,
+    SequenceInfo,
+} from "./provisioning";
 export type { DBSchema, TableDef, ColumnDef, RowForTable, PickRow, RowOfSelect, RowsOfSelect, RowOfRequest, RowsOfRequest } from "./SqlBuilder";
 export type { RowOfApiCall, RowsOfApiCall, RowOfApiMethod, RowsOfApiMethod, ParamsOfApiMethod } from "./Api";
-
-

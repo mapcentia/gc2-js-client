@@ -5,6 +5,7 @@
  *
  */
 
+import type { CentiaHttpClient } from "./http/client"
 import Rpc from "./Rpc"
 import {RpcRequest} from "./types/pgTypes"
 
@@ -98,22 +99,22 @@ function extractDataFromResponse(method: string, res: any): any[] {
     if (!result || typeof result !== "object") {
         throw new TypeError(`createApi: Invalid RPC response for method "${method}". Missing result object.`);
     }
-    const data = (result as any).data;
-    if (!Array.isArray(data)) {
+    const dataArr = (result as any).data;
+    if (!Array.isArray(dataArr)) {
         throw new TypeError(`createApi: Invalid RPC response for method "${method}". Expected result.data to be an array.`);
     }
-    return data;
+    return dataArr;
 }
 
 // Implementation signature (wide) — overloads above control the public typing
-async function dispatch<K extends keyof any & string>(name: K, paramsLike: unknown): Promise<any> {
+async function dispatch<K extends keyof any & string>(name: K, paramsLike: unknown, client?: CentiaHttpClient): Promise<any> {
     if (typeof name !== "string" || name.length === 0) {
         throw new TypeError("createApi: RPC method name must be a non-empty string.");
     }
 
     const params = validateParamsForMethod(String(name), paramsLike);
 
-    const rpc = new Rpc()
+    const rpc = new Rpc(client)
     const request: RpcRequest = {
         jsonrpc: "2.0",
         method: name,
@@ -125,7 +126,7 @@ async function dispatch<K extends keyof any & string>(name: K, paramsLike: unkno
     return extractDataFromResponse(String(name), res)
 }
 
-export default function createApi<T>(): MethodsOf<T> {
+export default function createApi<T>(client?: CentiaHttpClient): MethodsOf<T> {
     return new Proxy(
         {},
         {
@@ -133,7 +134,7 @@ export default function createApi<T>(): MethodsOf<T> {
                 if (typeof prop !== "string") return undefined;
                 return (...args: any[]) => {
                     const packed = args.length === 0 ? {} : (args.length === 1 ? args[0] : args);
-                    return (dispatch as any)(prop, packed);
+                    return (dispatch as any)(prop, packed, client);
                 };
             },
         }
