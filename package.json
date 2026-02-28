@@ -9,7 +9,10 @@
   "module": "./dist/centia-io-sdk.js",
   "types": "./dist/centia-io-sdk.d.cts",
   "exports": {
-    ".": "./src/index.ts",
+    ".": {
+      "require": "./dist/centia-io-sdk.cjs",
+      "import": "./dist/centia-io-sdk.js"
+    },
     "./package.json": "./package.json"
   },
   "files": [

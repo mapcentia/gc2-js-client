@@ -9,7 +9,7 @@ export default defineConfig({
     },
     platform: "browser",
     exports: {
-        devExports: true,
+        devExports: false,
     },
     format: ["esm", "cjs", "umd"],
     globalName: "CentiaSDK"
