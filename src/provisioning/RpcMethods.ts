@@ -15,6 +15,8 @@ import type {
 export default class RpcMethods {
   constructor(private readonly client: CentiaHttpClient) {}
 
+  async getRpc(): Promise<RpcMethodInfo[]>;
+  async getRpc(method: string): Promise<RpcMethodInfo>;
   async getRpc(method?: string): Promise<RpcMethodInfo | RpcMethodInfo[]> {
     const path = method
       ? `api/v4/methods/${encodeURIComponent(method)}`

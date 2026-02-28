@@ -18,6 +18,8 @@ export default class Indices {
     return `api/v4/schemas/${encodeURIComponent(schema)}/tables/${encodeURIComponent(table)}/indices`;
   }
 
+  async getIndex(schema: string, table: string): Promise<IndexInfo[]>;
+  async getIndex(schema: string, table: string, index: string): Promise<IndexInfo>;
   async getIndex(schema: string, table: string, index?: string): Promise<IndexInfo | IndexInfo[]> {
     const path = index
       ? `${this.basePath(schema, table)}/${encodeURIComponent(index)}`

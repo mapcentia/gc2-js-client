@@ -18,6 +18,8 @@ export default class Constraints {
     return `api/v4/schemas/${encodeURIComponent(schema)}/tables/${encodeURIComponent(table)}/constraints`;
   }
 
+  async getConstraint(schema: string, table: string): Promise<ConstraintInfo[]>;
+  async getConstraint(schema: string, table: string, constraint: string): Promise<ConstraintInfo>;
   async getConstraint(
     schema: string,
     table: string,

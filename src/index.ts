@@ -98,6 +98,7 @@ export type {
     PrivilegeLevel,
     PatchPrivilegeRequest,
     PrivilegeInfo,
+    TableInfo,
     CreateRpcMethodRequest,
     PatchRpcMethodRequest,
     RpcMethodInfo,

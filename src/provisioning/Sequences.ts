@@ -19,6 +19,8 @@ export default class Sequences {
     return `api/v4/schemas/${encodeURIComponent(schema)}/sequences`;
   }
 
+  async getSequence(schema: string): Promise<SequenceInfo[]>;
+  async getSequence(schema: string, sequence: string): Promise<SequenceInfo>;
   async getSequence(schema: string, sequence?: string): Promise<SequenceInfo | SequenceInfo[]> {
     const path = sequence
       ? `${this.basePath(schema)}/${encodeURIComponent(sequence)}`

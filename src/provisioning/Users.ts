@@ -15,6 +15,8 @@ import type {
 export default class ProvisioningUsers {
   constructor(private readonly client: CentiaHttpClient) {}
 
+  async getUser(): Promise<UserInfo[]>;
+  async getUser(name: string): Promise<UserInfo>;
   async getUser(name?: string): Promise<UserInfo | UserInfo[]> {
     const path = name
       ? `api/v4/users/${encodeURIComponent(name)}`

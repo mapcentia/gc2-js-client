@@ -5,7 +5,7 @@
  */
 
 import type { CentiaHttpClient } from '../http/client';
-import type { LocationResponse } from './types';
+import type { TableInfo, LocationResponse } from './types';
 
 export default class ProvisioningTables {
   constructor(private readonly client: CentiaHttpClient) {}
@@ -14,7 +14,9 @@ export default class ProvisioningTables {
     return `api/v4/schemas/${encodeURIComponent(schema)}/tables`;
   }
 
-  async getTable(schema: string, table?: string): Promise<unknown> {
+  async getTable(schema: string): Promise<TableInfo[]>;
+  async getTable(schema: string, table: string): Promise<TableInfo>;
+  async getTable(schema: string, table?: string): Promise<TableInfo | TableInfo[]> {
     const path = table
       ? `${this.basePath(schema)}/${encodeURIComponent(table)}`
       : this.basePath(schema);

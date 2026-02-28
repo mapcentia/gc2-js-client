@@ -14,6 +14,8 @@ import type {
 export default class Rules {
   constructor(private readonly client: CentiaHttpClient) {}
 
+  async getRule(): Promise<RuleInfo[]>;
+  async getRule(id: number): Promise<RuleInfo>;
   async getRule(id?: number): Promise<RuleInfo | RuleInfo[]> {
     const path = id != null
       ? `api/v4/rules/${encodeURIComponent(id)}`

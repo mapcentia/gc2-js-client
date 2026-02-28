@@ -19,6 +19,8 @@ export default class Columns {
     return `api/v4/schemas/${encodeURIComponent(schema)}/tables/${encodeURIComponent(table)}/columns`;
   }
 
+  async getColumn(schema: string, table: string): Promise<ColumnInfo[]>;
+  async getColumn(schema: string, table: string, column: string): Promise<ColumnInfo>;
   async getColumn(schema: string, table: string, column?: string): Promise<ColumnInfo | ColumnInfo[]> {
     const path = column
       ? `${this.basePath(schema, table)}/${encodeURIComponent(column)}`

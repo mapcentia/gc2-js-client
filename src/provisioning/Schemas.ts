@@ -16,7 +16,9 @@ import type {
 export default class Schemas {
   constructor(private readonly client: CentiaHttpClient) {}
 
-  async getSchema(schema?: string, opts?: GetSchemaOptions): Promise<SchemaInfo> {
+  async getSchema(schema?: undefined, opts?: GetSchemaOptions): Promise<SchemaInfo[]>;
+  async getSchema(schema: string, opts?: GetSchemaOptions): Promise<SchemaInfo>;
+  async getSchema(schema?: string, opts?: GetSchemaOptions): Promise<SchemaInfo | SchemaInfo[]> {
     const path = schema
       ? `api/v4/schemas/${encodeURIComponent(schema)}`
       : 'api/v4/schemas';
@@ -24,7 +26,7 @@ export default class Schemas {
     if (opts?.namesOnly) {
       query.namesOnly = 'true';
     }
-    return this.client.request<SchemaInfo>({
+    return this.client.request<SchemaInfo | SchemaInfo[]>({
       path,
       method: 'GET',
       query: Object.keys(query).length > 0 ? query : undefined,
