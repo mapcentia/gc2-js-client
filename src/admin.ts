@@ -14,12 +14,20 @@ import Sequences from './provisioning/Sequences';
 import ProvisioningTables from './provisioning/Tables';
 import ProvisioningUsers from './provisioning/Users';
 import ProvisioningClients from './provisioning/Clients';
+import Rules from './provisioning/Rules';
+import Privileges from './provisioning/Privileges';
+import RpcMethods from './provisioning/RpcMethods';
+import MetadataWrite from './provisioning/MetadataWrite';
+import TypeScriptInterfaces from './provisioning/TypeScriptInterfaces';
+import FileImport from './provisioning/FileImport';
+import GitCommit from './provisioning/GitCommit';
+import SqlNoToken from './provisioning/SqlNoToken';
 
 /** Admin client providing access to all provisioning operations. */
 export interface CentiaAdminClient {
   /** The underlying HTTP client. */
   readonly http: CentiaHttpClient;
-  /** Schema, table, column, constraint, index, sequence, user, and client management. */
+  /** Schema, table, column, constraint, index, sequence, user, client, rule, privilege, RPC, metadata, file import, git, and SQL management. */
   readonly provisioning: {
     readonly schemas: Schemas;
     readonly tables: ProvisioningTables;
@@ -29,6 +37,14 @@ export interface CentiaAdminClient {
     readonly sequences: Sequences;
     readonly users: ProvisioningUsers;
     readonly clients: ProvisioningClients;
+    readonly rules: Rules;
+    readonly privileges: Privileges;
+    readonly rpcMethods: RpcMethods;
+    readonly metadata: MetadataWrite;
+    readonly typeScript: TypeScriptInterfaces;
+    readonly fileImport: FileImport;
+    readonly gitCommit: GitCommit;
+    readonly sqlNoToken: SqlNoToken;
   };
 }
 
@@ -57,6 +73,14 @@ export function createCentiaAdminClient(config: CentiaClientConfig): CentiaAdmin
       sequences: new Sequences(http),
       users: new ProvisioningUsers(http),
       clients: new ProvisioningClients(http),
+      rules: new Rules(http),
+      privileges: new Privileges(http),
+      rpcMethods: new RpcMethods(http),
+      metadata: new MetadataWrite(http),
+      typeScript: new TypeScriptInterfaces(http),
+      fileImport: new FileImport(http),
+      gitCommit: new GitCommit(http),
+      sqlNoToken: new SqlNoToken(http),
     },
   };
 }

@@ -11,6 +11,14 @@ export { default as Indices } from './Indices';
 export { default as Sequences } from './Sequences';
 export { default as ProvisioningUsers } from './Users';
 export { default as ProvisioningClients } from './Clients';
+export { default as Rules } from './Rules';
+export { default as Privileges } from './Privileges';
+export { default as RpcMethods } from './RpcMethods';
+export { default as MetadataWrite } from './MetadataWrite';
+export { default as TypeScriptInterfaces } from './TypeScriptInterfaces';
+export { default as FileImport } from './FileImport';
+export { default as GitCommit } from './GitCommit';
+export { default as SqlNoToken } from './SqlNoToken';
 
 export type {
   // Shared
@@ -53,4 +61,30 @@ export type {
   PatchClientRequest,
   CreateClientResponse,
   ClientInfo,
+  // Rule
+  RuleAccess,
+  RuleRequest,
+  RuleService,
+  CreateRuleRequest,
+  PatchRuleRequest,
+  RuleInfo,
+  // Privilege
+  PrivilegeLevel,
+  PatchPrivilegeRequest,
+  PrivilegeInfo,
+  // RPC Method
+  CreateRpcMethodRequest,
+  PatchRpcMethodRequest,
+  RpcMethodInfo,
+  // Metadata
+  MetadataFieldInfo,
+  MetadataRelationInfo,
+  PatchMetadataRequest,
+  // File Import
+  FileProcessRequest,
+  FileProcessResult,
+  // Git Commit
+  CommitRequest,
+  CommitResult,
 } from './types';
+export type { SqlNoTokenRequest } from './SqlNoToken';

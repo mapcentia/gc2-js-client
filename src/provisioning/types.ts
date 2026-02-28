@@ -273,3 +273,144 @@ export interface ClientInfo {
   allow_signup: boolean;
   social_signup: boolean;
 }
+
+// ===== Access Rule types =====
+
+export type RuleAccess = 'allow' | 'limit' | 'deny';
+export type RuleRequest = 'select' | 'insert' | 'update' | 'delete';
+export type RuleService = 'sql' | 'ows' | 'wfst';
+
+export interface CreateRuleRequest {
+  access?: RuleAccess;
+  filter?: string;
+  id?: number;
+  iprange?: string;
+  priority?: number;
+  request?: RuleRequest;
+  schema?: string;
+  service?: RuleService;
+  table?: string;
+  username?: string;
+}
+
+export interface PatchRuleRequest {
+  access?: RuleAccess;
+  filter?: string;
+  iprange?: string;
+  priority?: number;
+  request?: RuleRequest;
+  schema?: string;
+  service?: RuleService;
+  table?: string;
+  username?: string;
+}
+
+export interface RuleInfo {
+  id: number;
+  access?: RuleAccess;
+  filter?: string;
+  iprange?: string;
+  priority?: number;
+  request?: RuleRequest;
+  schema?: string;
+  service?: RuleService;
+  table?: string;
+  username?: string;
+}
+
+// ===== Privilege types =====
+
+export type PrivilegeLevel = 'none' | 'read' | 'write';
+
+export interface PatchPrivilegeRequest {
+  subuser: string;
+  privilege: PrivilegeLevel;
+}
+
+export interface PrivilegeInfo {
+  subuser: string;
+  privilege: PrivilegeLevel;
+}
+
+// ===== RPC Method types =====
+
+export interface CreateRpcMethodRequest {
+  method: string;
+  q: string;
+  output_format?: string;
+  srs?: number;
+  type_formats?: Record<string, unknown>;
+  type_hints?: Record<string, unknown>;
+}
+
+export interface PatchRpcMethodRequest {
+  q: string;
+  output_format?: string;
+  srs?: number;
+  type_formats?: Record<string, unknown>;
+  type_hints?: Record<string, unknown>;
+}
+
+export interface RpcMethodInfo {
+  method: string;
+  q: string;
+  output_format?: string;
+  srs?: number;
+  type_formats?: Record<string, unknown>;
+  type_hints?: Record<string, unknown>;
+}
+
+// ===== Metadata types =====
+
+export interface MetadataFieldInfo {
+  alias?: string;
+  queryable?: boolean;
+  sort_id?: number;
+}
+
+export interface MetadataRelationInfo {
+  title?: string;
+  abstract?: string;
+  group?: string;
+  sort_id?: number;
+  tags?: string[];
+  properties?: Record<string, unknown>;
+  fields?: Record<string, MetadataFieldInfo>;
+}
+
+export interface PatchMetadataRequest {
+  relations: Record<string, MetadataRelationInfo>;
+}
+
+// ===== File Import types =====
+
+export interface FileProcessRequest {
+  file: string;
+  schema: string;
+  import?: boolean;
+  append?: boolean;
+  truncate?: boolean;
+  p_multi?: boolean;
+  s_srs?: string;
+  t_srs?: string;
+  timestamp?: string;
+  x_possible_names?: string;
+  y_possible_names?: string;
+}
+
+export interface FileProcessResult {
+  [key: string]: unknown;
+}
+
+// ===== Git Commit types =====
+
+export interface CommitRequest {
+  schema: string;
+  repo: string;
+  message: string;
+  meta_query?: string;
+}
+
+export interface CommitResult {
+  [key: string]: unknown;
+}
