@@ -13,6 +13,7 @@ export default class TypeScriptInterfaces {
     return this.client.request<string>({
       path: 'api/v4/interfaces',
       method: 'GET',
+      accept: 'text/plain',
     });
   }
 }

@@ -75,7 +75,7 @@ export class CentiaHttpClient {
 
   private async buildHeaders(opts: RequestOptions): Promise<Record<string, string>> {
     const headers: Record<string, string> = {
-      'Accept': 'application/json',
+      'Accept': opts.accept ?? 'application/json',
     };
 
     // Auth: getAccessToken sets Bearer token
@@ -149,7 +149,7 @@ export class CentiaHttpClient {
       });
     }
 
-    return parsed as T;
+    return (parsed ?? (bodyText || null)) as T;
   }
 }
 

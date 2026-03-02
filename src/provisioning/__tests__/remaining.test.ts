@@ -49,9 +49,14 @@ describe('MetadataWrite', () => {
 });
 
 describe('TypeScriptInterfaces', () => {
-  it('getTypeScript sends GET to /interfaces', async () => {
+  it('getTypeScript sends GET to /interfaces with text/plain Accept', async () => {
     const tsCode = 'export interface MyMethod { id: number; }';
-    const fetchFn = mockFetch(200, tsCode);
+    // Simulate a text/plain response (not JSON-wrapped)
+    const fetchFn = vi.fn().mockResolvedValue({
+      status: 200,
+      text: async () => tsCode,
+      headers: { get: () => null },
+    } as unknown as Response);
     const client = createClient(fetchFn);
 
     const result = await client.provisioning.typeScript.getTypeScript();
@@ -59,6 +64,7 @@ describe('TypeScriptInterfaces', () => {
     const [url, init] = lastCall(fetchFn);
     expect(url).toBe('https://api.example.com/api/v4/interfaces');
     expect(init.method).toBe('GET');
+    expect((init.headers as Record<string, string>)['Accept']).toBe('text/plain');
     expect(result).toBe(tsCode);
   });
 });

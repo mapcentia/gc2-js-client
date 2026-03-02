@@ -39,6 +39,8 @@ export interface RequestOptions {
   query?: Record<string, string>;
   /** Content-Type header. Defaults to "application/json". Set to null to omit. */
   contentType?: string | null;
+  /** Accept header. Defaults to "application/json". */
+  accept?: string;
   /** Expected HTTP status code. Defaults to 200. Non-match throws CentiaApiError. */
   expectedStatus?: number;
 }
