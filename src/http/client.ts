@@ -55,6 +55,21 @@ export class CentiaHttpClient {
     }
 
     const response = await this.fetchFn(url, init);
+
+    // In browsers, redirect: 'manual' returns an opaque-redirect response
+    // with status 0 and inaccessible headers. Detect this and synthesize
+    // the expected result instead of falling through to handleResponse.
+    if (response.type === 'opaqueredirect') {
+      const expected = opts.expectedStatus ?? 200;
+      if (expected === 303) {
+        return {
+          body: null as T,
+          status: 303,
+          getHeader: (name: string) => name.toLowerCase() === 'location' ? response.url : null,
+        };
+      }
+    }
+
     const body = await this.handleResponse<T>(response, opts, url);
     return {
       body,
