@@ -7,6 +7,7 @@
 import type { CentiaHttpClient } from '../http/client';
 import type {
   CreateRuleRequest,
+  LocationResponse,
   PatchRuleRequest,
   RuleInfo,
 } from './types';
@@ -35,12 +36,14 @@ export default class Rules {
     });
   }
 
-  async patchRule(id: number, body: PatchRuleRequest): Promise<RuleInfo> {
-    return this.client.request<RuleInfo>({
+  async patchRule(id: number, body: PatchRuleRequest): Promise<LocationResponse> {
+    const res = await this.client.requestFull({
       path: `api/v4/rules/${encodeURIComponent(id)}`,
       method: 'PATCH',
       body,
+      expectedStatus: 303,
     });
+    return { location: res.getHeader('Location') ?? '' };
   }
 
   async deleteRule(id: number): Promise<void> {
