@@ -27,7 +27,7 @@ export default class Rules {
     });
   }
 
-  async postRule(body: CreateRuleRequest): Promise<RuleInfo> {
+  async postRule(body: CreateRuleRequest | CreateRuleRequest[]): Promise<RuleInfo> {
     return this.client.request<RuleInfo>({
       path: 'api/v4/rules',
       method: 'POST',

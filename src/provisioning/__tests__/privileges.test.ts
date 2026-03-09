@@ -57,4 +57,25 @@ describe('Privileges', () => {
     });
     expect(result).toEqual(updated);
   });
+
+  it('patchPrivileges sends PATCH with array body', async () => {
+    const updated = [
+      { subuser: 'bob', privilege: 'write' },
+      { subuser: 'alice', privilege: 'read' },
+    ];
+    const fetchFn = mockFetch(200, updated);
+    const client = createClient(fetchFn);
+
+    const body = [
+      { subuser: 'bob', privilege: 'write' as const },
+      { subuser: 'alice', privilege: 'read' as const },
+    ];
+    const result = await client.provisioning.privileges.patchPrivileges('myschema', 'mytable', body);
+
+    const [url, init] = lastCall(fetchFn);
+    expect(url).toBe('https://api.example.com/api/v4/schemas/myschema/tables/mytable/privileges');
+    expect(init.method).toBe('PATCH');
+    expect(JSON.parse(init.body as string)).toEqual(body);
+    expect(result).toEqual(updated);
+  });
 });

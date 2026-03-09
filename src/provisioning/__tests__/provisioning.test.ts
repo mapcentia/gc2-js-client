@@ -71,6 +71,18 @@ describe('Schemas', () => {
     expect(result.location).toBe('/api/v4/schemas/myschema');
   });
 
+  it('postSchema sends POST with array body', async () => {
+    const fetchFn = mockFetch(201, null, { location: '/api/v4/schemas' });
+    const client = createClient(fetchFn);
+
+    const body = [{ name: 'schema_a' }, { name: 'schema_b' }];
+    await client.provisioning.schemas.postSchema(body);
+
+    const [, init] = lastCall(fetchFn);
+    expect(init.method).toBe('POST');
+    expect(JSON.parse(init.body as string)).toEqual(body);
+  });
+
   it('patchSchema sends PATCH and returns location', async () => {
     const fetchFn = mockFetch(303, null, { location: '/api/v4/schemas/newname' });
     const client = createClient(fetchFn);
@@ -140,6 +152,21 @@ describe('Columns', () => {
     expect(init.method).toBe('POST');
     expect(JSON.parse(init.body as string)).toEqual({ name: 'email', type: 'varchar' });
     expect(result.location).toContain('columns/email');
+  });
+
+  it('postColumn sends POST with array body', async () => {
+    const fetchFn = mockFetch(201, null, { location: '/api/v4/schemas/public/tables/users/columns' });
+    const client = createClient(fetchFn);
+
+    const body = [
+      { name: 'email', type: 'varchar' },
+      { name: 'age', type: 'integer' },
+    ];
+    await client.provisioning.columns.postColumn('public', 'users', body);
+
+    const [, init] = lastCall(fetchFn);
+    expect(init.method).toBe('POST');
+    expect(JSON.parse(init.body as string)).toEqual(body);
   });
 
   it('patchColumn sends PATCH 303 and returns location', async () => {
@@ -212,6 +239,21 @@ describe('Constraints', () => {
     expect(result.location).toContain('users-pk');
   });
 
+  it('postConstraint sends POST with array body', async () => {
+    const fetchFn = mockFetch(201, null, { location: '/api/v4/.../constraints' });
+    const client = createClient(fetchFn);
+
+    const body = [
+      { constraint: 'primary' as const, columns: ['id'] },
+      { constraint: 'unique' as const, columns: ['email'] },
+    ];
+    await client.provisioning.constraints.postConstraint('public', 'users', body);
+
+    const [, init] = lastCall(fetchFn);
+    expect(init.method).toBe('POST');
+    expect(JSON.parse(init.body as string)).toEqual(body);
+  });
+
   it('deleteConstraint sends DELETE 204', async () => {
     const fetchFn = mockFetch(204, null);
     const client = createClient(fetchFn);
@@ -251,6 +293,21 @@ describe('Indices', () => {
     expect(result.location).toContain('users-btree');
   });
 
+  it('postIndex sends POST with array body', async () => {
+    const fetchFn = mockFetch(201, null, { location: '/api/v4/.../indices' });
+    const client = createClient(fetchFn);
+
+    const body = [
+      { columns: ['name'], method: 'btree' as const },
+      { columns: ['email'], method: 'hash' as const },
+    ];
+    await client.provisioning.indices.postIndex('public', 'users', body);
+
+    const [, init] = lastCall(fetchFn);
+    expect(init.method).toBe('POST');
+    expect(JSON.parse(init.body as string)).toEqual(body);
+  });
+
   it('deleteIndex sends DELETE 204', async () => {
     const fetchFn = mockFetch(204, null);
     const client = createClient(fetchFn);
@@ -288,6 +345,21 @@ describe('Sequences', () => {
     expect(url).toBe('https://api.example.com/api/v4/schemas/public/sequences');
     expect(init.method).toBe('POST');
     expect(result.location).toContain('counter_seq');
+  });
+
+  it('postSequence sends POST with array body', async () => {
+    const fetchFn = mockFetch(201, null, { location: '/api/v4/schemas/public/sequences' });
+    const client = createClient(fetchFn);
+
+    const body = [
+      { name: 'seq_a', increment_by: 1 },
+      { name: 'seq_b', increment_by: 5 },
+    ];
+    await client.provisioning.sequences.postSequence('public', body);
+
+    const [, init] = lastCall(fetchFn);
+    expect(init.method).toBe('POST');
+    expect(JSON.parse(init.body as string)).toEqual(body);
   });
 
   it('patchSequence sends PATCH 303 and returns location', async () => {

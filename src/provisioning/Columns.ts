@@ -28,7 +28,7 @@ export default class Columns {
     return this.client.request({ path, method: 'GET' });
   }
 
-  async postColumn(schema: string, table: string, body: CreateColumnRequest): Promise<LocationResponse> {
+  async postColumn(schema: string, table: string, body: CreateColumnRequest | CreateColumnRequest[]): Promise<LocationResponse> {
     const res = await this.client.requestFull({
       path: this.basePath(schema, table),
       method: 'POST',

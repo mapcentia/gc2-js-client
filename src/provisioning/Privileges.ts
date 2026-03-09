@@ -20,7 +20,7 @@ export default class Privileges {
     });
   }
 
-  async patchPrivileges(schema: string, table: string, body: PatchPrivilegeRequest): Promise<PrivilegeInfo[]> {
+  async patchPrivileges(schema: string, table: string, body: PatchPrivilegeRequest | PatchPrivilegeRequest[]): Promise<PrivilegeInfo[]> {
     return this.client.request<PrivilegeInfo[]>({
       path: `api/v4/schemas/${encodeURIComponent(schema)}/tables/${encodeURIComponent(table)}/privileges`,
       method: 'PATCH',

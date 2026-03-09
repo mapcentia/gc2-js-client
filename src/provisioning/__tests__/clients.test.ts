@@ -98,6 +98,25 @@ describe('ProvisioningClients', () => {
     expect(body.allow_signup).toBe(true);
   });
 
+  it('postClient sends POST with array body', async () => {
+    const fetchFn = mockFetch(
+      201,
+      { secret: 'sec' },
+      { location: '/api/v4/clients' },
+    );
+    const client = createClient(fetchFn);
+
+    const body = [
+      { name: 'App A' },
+      { name: 'App B' },
+    ];
+    await client.provisioning.clients.postClient(body);
+
+    const [, init] = lastCall(fetchFn);
+    expect(init.method).toBe('POST');
+    expect(JSON.parse(init.body as string)).toEqual(body);
+  });
+
   it('patchClient sends PATCH 303 and returns location', async () => {
     const fetchFn = mockFetch(303, null, { location: '/api/v4/clients/myapp' });
     const client = createClient(fetchFn);

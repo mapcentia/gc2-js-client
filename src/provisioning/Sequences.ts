@@ -28,7 +28,7 @@ export default class Sequences {
     return this.client.request({ path, method: 'GET' });
   }
 
-  async postSequence(schema: string, body: CreateSequenceRequest): Promise<LocationResponse> {
+  async postSequence(schema: string, body: CreateSequenceRequest | CreateSequenceRequest[]): Promise<LocationResponse> {
     const res = await this.client.requestFull({
       path: this.basePath(schema),
       method: 'POST',

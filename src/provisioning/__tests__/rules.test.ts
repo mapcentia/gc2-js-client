@@ -71,6 +71,21 @@ describe('Rules', () => {
     expect(result).toEqual(newRule);
   });
 
+  it('postRule sends POST with array body', async () => {
+    const fetchFn = mockFetch(201, [{ id: 1 }, { id: 2 }]);
+    const client = createClient(fetchFn);
+
+    const body = [
+      { access: 'allow' as const, priority: 10 },
+      { access: 'deny' as const, priority: 20 },
+    ];
+    await client.provisioning.rules.postRule(body);
+
+    const [, init] = lastCall(fetchFn);
+    expect(init.method).toBe('POST');
+    expect(JSON.parse(init.body as string)).toEqual(body);
+  });
+
   it('patchRule sends PATCH to correct path', async () => {
     const updated = { id: 5, access: 'deny' };
     const fetchFn = mockFetch(200, updated);

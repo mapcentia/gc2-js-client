@@ -34,7 +34,7 @@ export default class Constraints {
   async postConstraint(
     schema: string,
     table: string,
-    body: CreateConstraintRequest,
+    body: CreateConstraintRequest | CreateConstraintRequest[],
   ): Promise<LocationResponse> {
     const res = await this.client.requestFull({
       path: this.basePath(schema, table),

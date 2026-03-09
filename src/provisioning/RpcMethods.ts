@@ -27,7 +27,7 @@ export default class RpcMethods {
     });
   }
 
-  async postRpc(body: CreateRpcMethodRequest): Promise<LocationResponse> {
+  async postRpc(body: CreateRpcMethodRequest | CreateRpcMethodRequest[]): Promise<LocationResponse> {
     const res = await this.client.requestFull({
       path: 'api/v4/methods',
       method: 'POST',

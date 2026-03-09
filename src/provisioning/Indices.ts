@@ -30,7 +30,7 @@ export default class Indices {
   async postIndex(
     schema: string,
     table: string,
-    body: CreateIndexRequest,
+    body: CreateIndexRequest | CreateIndexRequest[],
   ): Promise<LocationResponse> {
     const res = await this.client.requestFull({
       path: this.basePath(schema, table),

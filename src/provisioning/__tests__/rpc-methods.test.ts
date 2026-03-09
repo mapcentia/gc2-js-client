@@ -70,6 +70,21 @@ describe('RpcMethods', () => {
     expect(result.location).toBe('/api/v4/methods/newMethod');
   });
 
+  it('postRpc sends POST with array body', async () => {
+    const fetchFn = mockFetch(201, null, { location: '/api/v4/methods' });
+    const client = createClient(fetchFn);
+
+    const body = [
+      { method: 'methodA', q: 'SELECT 1' },
+      { method: 'methodB', q: 'SELECT 2' },
+    ];
+    await client.provisioning.rpcMethods.postRpc(body);
+
+    const [, init] = lastCall(fetchFn);
+    expect(init.method).toBe('POST');
+    expect(JSON.parse(init.body as string)).toEqual(body);
+  });
+
   it('patchRpc sends PATCH 303 and returns location', async () => {
     const fetchFn = mockFetch(303, null, { location: '/api/v4/methods/myMethod' });
     const client = createClient(fetchFn);

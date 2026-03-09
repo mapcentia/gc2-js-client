@@ -27,7 +27,7 @@ export default class ProvisioningUsers {
     });
   }
 
-  async postUser(body: CreateUserRequest): Promise<LocationResponse> {
+  async postUser(body: CreateUserRequest | CreateUserRequest[]): Promise<LocationResponse> {
     const res = await this.client.requestFull({
       path: 'api/v4/users',
       method: 'POST',

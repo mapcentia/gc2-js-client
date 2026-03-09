@@ -23,7 +23,7 @@ export default class ProvisioningTables {
     return this.client.request({ path, method: 'GET' });
   }
 
-  async postTable(schema: string, body: { name: string; [key: string]: unknown }): Promise<LocationResponse> {
+  async postTable(schema: string, body: { name: string; [key: string]: unknown } | { name: string; [key: string]: unknown }[]): Promise<LocationResponse> {
     const res = await this.client.requestFull({
       path: this.basePath(schema),
       method: 'POST',

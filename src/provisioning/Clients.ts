@@ -28,7 +28,7 @@ export default class ProvisioningClients {
     });
   }
 
-  async postClient(body: CreateClientRequest): Promise<CreateClientResponse> {
+  async postClient(body: CreateClientRequest | CreateClientRequest[]): Promise<CreateClientResponse> {
     const res = await this.client.requestFull<{ secret: string }>({
       path: 'api/v4/clients',
       method: 'POST',

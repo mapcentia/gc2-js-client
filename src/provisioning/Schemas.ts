@@ -33,7 +33,7 @@ export default class Schemas {
     });
   }
 
-  async postSchema(body: CreateSchemaRequest): Promise<LocationResponse> {
+  async postSchema(body: CreateSchemaRequest | CreateSchemaRequest[]): Promise<LocationResponse> {
     const res = await this.client.requestFull({
       path: 'api/v4/schemas',
       method: 'POST',
