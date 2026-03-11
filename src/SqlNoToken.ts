@@ -20,7 +20,7 @@ export default class SqlNoToken {
 
   async postSqlNoToken(database: string, body: SqlNoTokenRequest): Promise<unknown> {
     return this.client.request({
-      path: `api/v4/prosql/database/${encodeURIComponent(database)}`,
+      path: `api/v4/sql/database/${encodeURIComponent(database)}`,
       method: 'POST',
       body,
     });
