@@ -21,7 +21,6 @@ import MetadataWrite from './provisioning/MetadataWrite';
 import TypeScriptInterfaces from './provisioning/TypeScriptInterfaces';
 import FileImport from './provisioning/FileImport';
 import GitCommit from './provisioning/GitCommit';
-import SqlNoToken from './provisioning/SqlNoToken';
 
 /** Admin client providing access to all provisioning operations. */
 export interface CentiaAdminClient {
@@ -44,7 +43,6 @@ export interface CentiaAdminClient {
     readonly typeScript: TypeScriptInterfaces;
     readonly fileImport: FileImport;
     readonly gitCommit: GitCommit;
-    readonly sqlNoToken: SqlNoToken;
   };
 }
 
@@ -80,7 +78,6 @@ export function createCentiaAdminClient(config: CentiaClientConfig): CentiaAdmin
       typeScript: new TypeScriptInterfaces(http),
       fileImport: new FileImport(http),
       gitCommit: new GitCommit(http),
-      sqlNoToken: new SqlNoToken(http),
     },
   };
 }

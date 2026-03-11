@@ -8,6 +8,7 @@
 import CodeFlow from "./CodeFlow"
 import PasswordFlow from "./PasswordFlow"
 import Sql from "./Sql"
+import SqlNoToken from "./SqlNoToken"
 import Rpc from "./Rpc"
 import Gql from "./Gql"
 import Meta from "./Meta"
@@ -31,6 +32,7 @@ export {
     CodeFlow,
     PasswordFlow,
     Sql,
+    SqlNoToken,
     Rpc,
     Gql,
     Meta,
@@ -109,7 +111,7 @@ export type {
     FileProcessResult,
     CommitRequest,
     CommitResult,
-    SqlNoTokenRequest,
 } from "./provisioning";
+export type { SqlNoTokenRequest } from "./SqlNoToken";
 export type { DBSchema, TableDef, ColumnDef, RowForTable, PickRow, RowOfSelect, RowsOfSelect, RowOfRequest, RowsOfRequest } from "./SqlBuilder";
 export type { RowOfApiCall, RowsOfApiCall, RowOfApiMethod, RowsOfApiMethod, ParamsOfApiMethod } from "./Api";

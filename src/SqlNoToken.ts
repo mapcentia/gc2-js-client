@@ -4,7 +4,7 @@
  * @license    https://opensource.org/license/mit  The MIT License
  */
 
-import type { CentiaHttpClient } from '../http/client';
+import type { CentiaHttpClient } from './http/client';
 
 export interface SqlNoTokenRequest {
   q: string;
@@ -20,7 +20,7 @@ export default class SqlNoToken {
 
   async postSqlNoToken(database: string, body: SqlNoTokenRequest): Promise<unknown> {
     return this.client.request({
-      path: `api/v4/sql/database/${encodeURIComponent(database)}`,
+      path: `api/v4/prosql/database/${encodeURIComponent(database)}`,
       method: 'POST',
       body,
     });

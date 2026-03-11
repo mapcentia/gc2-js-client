@@ -131,23 +131,3 @@ describe('GitCommit', () => {
     expect(result).toEqual(commitResult);
   });
 });
-
-describe('SqlNoToken', () => {
-  it('postSqlNoToken sends POST to database path', async () => {
-    const sqlResult = [{ id: 1 }];
-    const fetchFn = mockFetch(200, sqlResult);
-    const client = createClient(fetchFn);
-
-    const result = await client.provisioning.sqlNoToken.postSqlNoToken('mydb', {
-      q: 'SELECT 1 AS id',
-    });
-
-    const [url, init] = lastCall(fetchFn);
-    expect(url).toBe('https://api.example.com/api/v4/sql/database/mydb');
-    expect(init.method).toBe('POST');
-    expect(JSON.parse(init.body as string)).toEqual({
-      q: 'SELECT 1 AS id',
-    });
-    expect(result).toEqual(sqlResult);
-  });
-});

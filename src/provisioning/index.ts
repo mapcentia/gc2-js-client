@@ -18,7 +18,6 @@ export { default as MetadataWrite } from './MetadataWrite';
 export { default as TypeScriptInterfaces } from './TypeScriptInterfaces';
 export { default as FileImport } from './FileImport';
 export { default as GitCommit } from './GitCommit';
-export { default as SqlNoToken } from './SqlNoToken';
 
 export type {
   // Shared
@@ -87,4 +86,3 @@ export type {
   CommitRequest,
   CommitResult,
 } from './types';
-export type { SqlNoTokenRequest } from './SqlNoToken';
