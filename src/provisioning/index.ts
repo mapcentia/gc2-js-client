@@ -81,7 +81,7 @@ export type {
   PatchMetadataRequest,
   // File Import
   FileProcessRequest,
-  FileProcessResult,
+  FileProcessResponse,
   // Git Commit
   CommitRequest,
   CommitResult,

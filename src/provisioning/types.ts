@@ -398,8 +398,15 @@ export interface FileProcessRequest {
   y_possible_names?: string;
 }
 
-export interface FileProcessResult {
-  [key: string]: unknown;
+export interface FileProcessResponse {
+  driver: string;
+  count: number;
+  geom_type: string;
+  index: number;
+  name: string;
+  has_wkt: boolean;
+  auth_str: string;
+  error: string;
 }
 
 // ===== Git Commit types =====

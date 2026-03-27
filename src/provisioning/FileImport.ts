@@ -5,7 +5,7 @@
  */
 
 import type { CentiaHttpClient } from '../http/client';
-import type { FileProcessRequest, FileProcessResult } from './types';
+import type { FileProcessRequest, FileProcessResponse } from './types';
 
 export default class FileImport {
   constructor(private readonly client: CentiaHttpClient) {}
@@ -24,12 +24,12 @@ export default class FileImport {
     });
   }
 
-  async postFileProcess(body: FileProcessRequest): Promise<FileProcessResult> {
-    return this.client.request<FileProcessResult>({
+  async postFileProcess(body: FileProcessRequest): Promise<FileProcessResponse[]> {
+    return this.client.request<FileProcessResponse[]>({
       path: 'api/v4/file/process',
       method: 'POST',
       body,
-      expectedStatus: 201,
+      expectedStatus: 200,
     });
   }
 }

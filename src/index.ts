@@ -108,7 +108,7 @@ export type {
     MetadataRelationInfo,
     PatchMetadataRequest,
     FileProcessRequest,
-    FileProcessResult,
+    FileProcessResponse,
     CommitRequest,
     CommitResult,
 } from "./provisioning";
