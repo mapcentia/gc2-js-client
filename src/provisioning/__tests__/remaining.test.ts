@@ -71,7 +71,7 @@ describe('TypeScriptInterfaces', () => {
 
 describe('FileImport', () => {
   it('postFileUpload sends POST with null contentType', async () => {
-    const fetchFn = mockFetch(200, { filename: 'test.csv' });
+    const fetchFn = mockFetch(201, { filename: 'test.csv' });
     const client = createClient(fetchFn);
 
     const formData = new FormData();
@@ -85,9 +85,49 @@ describe('FileImport', () => {
     expect(result).toEqual({ filename: 'test.csv' });
   });
 
+  it('postFileUpload sends chunked requests when chunkSize is set', async () => {
+    const fetchFn = vi.fn().mockResolvedValue({
+      status: 201,
+      text: async () => JSON.stringify({ filename: 'big.gpkg' }),
+      headers: { get: () => null },
+    } as unknown as Response);
+    const client = createClient(fetchFn);
+
+    // Create a 10-byte file so we get 3 chunks with chunkSize=4
+    const file = new File(['0123456789'], 'big.gpkg');
+    const formData = new FormData();
+    formData.append('filename', file);
+
+    const result = await client.provisioning.fileImport.postFileUpload(formData, {
+      chunkSize: 4,
+    });
+
+    expect(result).toEqual({ filename: 'big.gpkg' });
+    expect(fetchFn).toHaveBeenCalledTimes(3);
+
+    // Verify each call has correct query params
+    const calls = (fetchFn as ReturnType<typeof vi.fn>).mock.calls as [string, RequestInit][];
+    expect(calls[0][0]).toContain('chunk=0');
+    expect(calls[0][0]).toContain('chunks=3');
+    expect(calls[1][0]).toContain('chunk=1');
+    expect(calls[2][0]).toContain('chunk=2');
+  });
+
+  it('postFileUpload throws if FormData has no "filename" entry for chunked upload', async () => {
+    const fetchFn = mockFetch(201, {});
+    const client = createClient(fetchFn);
+
+    const formData = new FormData();
+    formData.append('other', new Blob(['data']));
+
+    await expect(
+      client.provisioning.fileImport.postFileUpload(formData, { chunkSize: 1024 }),
+    ).rejects.toThrow('FormData must contain a "filename" entry');
+  });
+
   it('postFileProcess sends POST with body', async () => {
     const processResult = { rows: 100 };
-    const fetchFn = mockFetch(200, processResult);
+    const fetchFn = mockFetch(201, processResult);
     const client = createClient(fetchFn);
 
     const result = await client.provisioning.fileImport.postFileProcess({

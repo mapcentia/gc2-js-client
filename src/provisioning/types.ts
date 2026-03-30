@@ -384,6 +384,10 @@ export interface PatchMetadataRequest {
 
 // ===== File Import types =====
 
+export interface FileUploadOptions {
+  chunkSize?: number;
+}
+
 export interface FileProcessRequest {
   file: string;
   schema: string;

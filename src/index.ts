@@ -107,6 +107,7 @@ export type {
     MetadataFieldInfo,
     MetadataRelationInfo,
     PatchMetadataRequest,
+    FileUploadOptions,
     FileProcessRequest,
     FileProcessResponse,
     CommitRequest,

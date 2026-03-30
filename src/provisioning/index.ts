@@ -80,6 +80,7 @@ export type {
   MetadataRelationInfo,
   PatchMetadataRequest,
   // File Import
+  FileUploadOptions,
   FileProcessRequest,
   FileProcessResponse,
   // Git Commit
