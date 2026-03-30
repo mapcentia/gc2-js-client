@@ -29,7 +29,7 @@ export default class FileImport {
       path: 'api/v4/file/process',
       method: 'POST',
       body,
-      expectedStatus: 200,
+      expectedStatus: 201,
     });
   }
 }
