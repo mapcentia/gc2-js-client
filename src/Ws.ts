@@ -5,56 +5,181 @@
  *
  */
 
-import {WsOptions, getTokens} from "./util/utils";
+import {getTokens} from "./util/utils";
+
+// ── Message types ──────────────────────────────────────────────
+
+export type BatchMessage = {
+    type: 'batch';
+    db: string;
+    batch: Record<string, Record<string, TableBatch>>;
+}
+
+export type TableBatch = {
+    INSERT?: any[][];
+    UPDATE?: any[][];
+    DELETE?: any[][];
+    full_data?: Record<string, any>[];
+}
+
+export type SubscriptionAckMessage = {
+    type: 'subscription_ack';
+    id: string;
+}
+
+export type WsErrorMessage = {
+    type: 'error';
+    error: 'missing_token' | 'invalid_token' | 'not_allowed' | string;
+    message: string;
+}
+
+export type WsMessage = BatchMessage | SubscriptionAckMessage | WsErrorMessage;
+
+// ── Subscription ───────────────────────────────────────────────
+
+export type SubscriptionRequest = {
+    id: string;
+    schema: string;
+    rel: string;
+    where?: string;
+    columns?: string;
+    op?: 'INSERT' | 'UPDATE' | 'DELETE';
+}
+
+// ── Events ─────────────────────────────────────────────────────
+
+type WsEventMap = {
+    batch: BatchMessage;
+    subscription_ack: SubscriptionAckMessage;
+    error: WsErrorMessage;
+    open: void;
+    close: { code: number; reason: string };
+}
+
+type WsEventListener<T> = (data: T) => void;
+
+// ── Options ────────────────────────────────────────────────────
+
+export type WsOptions = {
+    host: string;
+    rels?: string;
+    wsClient?: unknown;
+    reconnect?: boolean;
+    reconnectInterval?: number;
+}
+
+// ── Class ──────────────────────────────────────────────────────
 
 export default class Ws {
     private readonly options: WsOptions;
+    private ws: WebSocket | null = null;
+    private listeners: { [K in keyof WsEventMap]?: WsEventListener<WsEventMap[K]>[] } = {};
+    private closed = false;
 
     constructor(options: WsOptions) {
-        this.options = options;
-        this.options.wsClient = this.options?.wsClient ?? WebSocket
+        this.options = {
+            reconnect: true,
+            reconnectInterval: 3000,
+            ...options,
+        };
+        this.options.wsClient = this.options.wsClient ?? WebSocket;
     }
 
     connect(): void {
-        const me = this;
-        const {accessToken} = getTokens()
+        this.closed = false;
+        this.doConnect();
+    }
 
-        const connect = () => {
-            let queryString = `?token=` + accessToken
-            if (this.options?.rel) {
-                queryString = queryString + `&rel=` + this.options.rel
-            }
-            const WSClass = this.options.wsClient as any;
-            const ws: WebSocket = new WSClass(
-                this.options.host + `/` + queryString,
-            );
+    disconnect(): void {
+        this.closed = true;
+        this.ws?.close();
+        this.ws = null;
+    }
 
-            ws.onopen = function () {
-                console.log('WebSocket connected!');
-            };
+    subscribe(sub: SubscriptionRequest): void {
+        this.send({type: 'subscription', ...sub});
+    }
 
-            ws.onmessage = function (event: MessageEvent) {
-                // Handle incoming messages
-                me.options.callBack((event as any).data)
-            };
+    send(data: unknown): void {
+        if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+            throw new Error('WebSocket is not connected');
+        }
+        this.ws.send(typeof data === 'string' ? data : JSON.stringify(data));
+    }
 
-            ws.onclose = function (event: CloseEvent) {
-                if (accessToken !== '') {
-                    console.log('WebSocket closed, reconnecting in 3 seconds...', (event as any).reason);
-                    setTimeout(connect, 3000); // Try to reconnect
-                }
-            };
+    on<K extends keyof WsEventMap>(event: K, listener: WsEventListener<WsEventMap[K]>): () => void {
+        if (!this.listeners[event]) {
+            this.listeners[event] = [];
+        }
+        (this.listeners[event] as WsEventListener<WsEventMap[K]>[]).push(listener);
+        return () => this.off(event, listener);
+    }
 
-            ws.onerror = function (err: Event) {
-                console.error('WebSocket error observed:', err);
-                // Close the socket on error to ensure clean reconnection
-                ws.close();
-            };
+    off<K extends keyof WsEventMap>(event: K, listener: WsEventListener<WsEventMap[K]>): void {
+        const arr = this.listeners[event] as WsEventListener<WsEventMap[K]>[] | undefined;
+        if (!arr) return;
+        const idx = arr.indexOf(listener);
+        if (idx !== -1) arr.splice(idx, 1);
+    }
+
+    get connected(): boolean {
+        return this.ws?.readyState === WebSocket.OPEN;
+    }
+
+    // ── Private ────────────────────────────────────────────────
+
+    private emit<K extends keyof WsEventMap>(event: K, data: WsEventMap[K]): void {
+        const arr = this.listeners[event] as WsEventListener<WsEventMap[K]>[] | undefined;
+        if (!arr) return;
+        for (const fn of arr) fn(data);
+    }
+
+    private doConnect(): void {
+        const {accessToken} = getTokens();
+        if (!accessToken) return;
+
+        let url = this.options.host + '/?token=' + encodeURIComponent(accessToken);
+        if (this.options.rels) {
+            url += '&rels=' + encodeURIComponent(this.options.rels);
+        }
+
+        const WSClass = this.options.wsClient as any;
+        const ws: WebSocket = new WSClass(url);
+        this.ws = ws;
+
+        ws.onopen = () => {
+            this.emit('open', undefined as any);
         };
 
-        // Start the connection
-        if (accessToken !== '') {
-            connect();
-        }
+        ws.onmessage = (event: MessageEvent) => {
+            let msg: WsMessage;
+            try {
+                msg = JSON.parse(typeof event.data === 'string' ? event.data : event.data.toString());
+            } catch {
+                return;
+            }
+            switch (msg.type) {
+                case 'batch':
+                    this.emit('batch', msg);
+                    break;
+                case 'subscription_ack':
+                    this.emit('subscription_ack', msg);
+                    break;
+                case 'error':
+                    this.emit('error', msg);
+                    break;
+            }
+        };
+
+        ws.onclose = (event: CloseEvent) => {
+            this.emit('close', {code: event.code, reason: event.reason});
+            if (!this.closed && this.options.reconnect) {
+                setTimeout(() => this.doConnect(), this.options.reconnectInterval);
+            }
+        };
+
+        ws.onerror = () => {
+            ws.close();
+        };
     }
 }

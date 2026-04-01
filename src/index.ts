@@ -27,6 +27,7 @@ import { createCentiaAdminClient } from "./admin"
 import type {RpcRequest, RpcResponse, GqlRequest, GqlResponse, SqlRequest, SqlResponse} from "./types/pgTypes"
 import type * as PgTypes from "./types/pgTypes"
 import type {Options, CodeFlowOptions, PasswordFlowOptions} from "./util/utils"
+import type {WsOptions, WsMessage, BatchMessage, SubscriptionAckMessage, WsErrorMessage, SubscriptionRequest, TableBatch} from "./Ws"
 
 export {
     CodeFlow,
@@ -61,6 +62,13 @@ export type {
     Options,
     CodeFlowOptions,
     PasswordFlowOptions,
+    WsOptions,
+    WsMessage,
+    BatchMessage,
+    SubscriptionAckMessage,
+    WsErrorMessage,
+    SubscriptionRequest,
+    TableBatch,
     PgTypes,
 }
 

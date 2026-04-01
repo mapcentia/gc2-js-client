@@ -44,13 +44,6 @@ export type SignUpOptions = Options & {
     redirectUri: string
 }
 
-export type WsOptions = {
-    host: string
-    callBack: Function
-    rel?: string
-    wsClient?: unknown
-}
-
 export type GetDeviceCodeResponse = {
     device_code: string
     user_code: string
