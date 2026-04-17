@@ -7,6 +7,7 @@ export default defineConfig({
     dts: {
         sourcemap: true,
     },
+    target: "es2017",
     platform: "browser",
     exports: {
         devExports: false,
