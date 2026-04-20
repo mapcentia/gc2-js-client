@@ -5,7 +5,7 @@
  */
 
 import type { CentiaHttpClient } from '../http/client';
-import type { TableInfo, LocationResponse } from './types';
+import type { TableInfo, GetTableOptions, LocationResponse } from './types';
 
 export default class ProvisioningTables {
   constructor(private readonly client: CentiaHttpClient) {}
@@ -14,13 +14,21 @@ export default class ProvisioningTables {
     return `api/v4/schemas/${encodeURIComponent(schema)}/tables`;
   }
 
-  async getTable(schema: string): Promise<TableInfo[]>;
-  async getTable(schema: string, table: string): Promise<TableInfo>;
-  async getTable(schema: string, table?: string): Promise<TableInfo | TableInfo[]> {
+  async getTable(schema: string, table?: undefined, opts?: GetTableOptions): Promise<TableInfo[]>;
+  async getTable(schema: string, table: string, opts?: GetTableOptions): Promise<TableInfo>;
+  async getTable(schema: string, table?: string, opts?: GetTableOptions): Promise<TableInfo | TableInfo[]> {
     const path = table
       ? `${this.basePath(schema)}/${encodeURIComponent(table)}`
       : this.basePath(schema);
-    return this.client.request({ path, method: 'GET' });
+    const query: Record<string, string> = {};
+    if (opts?.namesOnly) {
+      query.namesOnly = 'true';
+    }
+    return this.client.request({
+      path,
+      method: 'GET',
+      query: Object.keys(query).length > 0 ? query : undefined,
+    });
   }
 
   async postTable(schema: string, body: { name: string; [key: string]: unknown } | { name: string; [key: string]: unknown }[]): Promise<LocationResponse> {

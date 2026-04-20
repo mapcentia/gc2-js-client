@@ -116,6 +116,50 @@ describe('Schemas', () => {
   });
 });
 
+describe('Tables', () => {
+  it('getTable without table name lists all tables', async () => {
+    const fetchFn = mockFetch(200, [{ name: 'users' }, { name: 'orders' }]);
+    const client = createClient(fetchFn);
+
+    await client.provisioning.tables.getTable('public');
+
+    const [url, init] = lastCall(fetchFn);
+    expect(url).toBe('https://api.example.com/api/v4/schemas/public/tables');
+    expect(init.method).toBe('GET');
+  });
+
+  it('getTable with table name sends GET to correct path', async () => {
+    const fetchFn = mockFetch(200, { name: 'users' });
+    const client = createClient(fetchFn);
+
+    const result = await client.provisioning.tables.getTable('public', 'users');
+
+    const [url] = lastCall(fetchFn);
+    expect(url).toBe('https://api.example.com/api/v4/schemas/public/tables/users');
+    expect(result.name).toBe('users');
+  });
+
+  it('getTable with namesOnly sends query param', async () => {
+    const fetchFn = mockFetch(200, [{ name: 'users' }]);
+    const client = createClient(fetchFn);
+
+    await client.provisioning.tables.getTable('public', undefined, { namesOnly: true });
+
+    const [url] = lastCall(fetchFn);
+    expect(url).toBe('https://api.example.com/api/v4/schemas/public/tables?namesOnly=true');
+  });
+
+  it('getTable with table name and namesOnly sends query param', async () => {
+    const fetchFn = mockFetch(200, { name: 'users' });
+    const client = createClient(fetchFn);
+
+    await client.provisioning.tables.getTable('public', 'users', { namesOnly: true });
+
+    const [url] = lastCall(fetchFn);
+    expect(url).toBe('https://api.example.com/api/v4/schemas/public/tables/users?namesOnly=true');
+  });
+});
+
 describe('Columns', () => {
   it('getColumn sends GET with single column path', async () => {
     const fetchFn = mockFetch(200, { name: 'id', type: 'integer' });

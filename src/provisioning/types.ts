@@ -57,6 +57,10 @@ export interface TableInfo {
   comment?: string;
 }
 
+export interface GetTableOptions {
+  namesOnly?: boolean;
+}
+
 // ===== Column types =====
 
 export interface ColumnDef {
