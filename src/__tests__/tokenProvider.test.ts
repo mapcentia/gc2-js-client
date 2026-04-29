@@ -52,4 +52,56 @@ describe('createTokenProvider', () => {
         await expect(provider.getAccessToken()).rejects.toBeInstanceOf(NotLoggedInError)
         expect(authService.getRefreshToken).not.toHaveBeenCalled()
     })
+
+    it('refreshes and persists new access + refresh tokens when access token is expired', async () => {
+        const past = Math.floor(Date.now() / 1000) - 60
+        const future = Math.floor(Date.now() / 1000) + 3600
+        const oldAccess = makeJwt(past)
+        const oldRefresh = makeJwt(future) // not expired
+        const newAccess = makeJwt(future)
+        const newRefresh = makeJwt(future + 86400)
+
+        const store = memoryStore({ token: oldAccess, refresh_token: oldRefresh })
+        const authService: AuthService = {
+            getRefreshToken: vi.fn(async () => ({
+                access_token: newAccess,
+                refresh_token: newRefresh,
+                expires_in: 3600,
+                refresh_expires_in: 86400,
+                token_type: 'Bearer',
+                'not-before-policy': 0,
+                session_state: 's',
+                scope: '',
+            })),
+        }
+
+        const provider = createTokenProvider({ store, authService })
+        const got = await provider.getAccessToken()
+
+        expect(got).toBe(newAccess)
+        expect(authService.getRefreshToken).toHaveBeenCalledWith(oldRefresh)
+        expect(store._data.token).toBe(newAccess)
+        expect(store._data.refresh_token).toBe(newRefresh)
+        expect(store._writes).toHaveLength(1)
+    })
+
+    it('throws SessionExpiredError when access token is expired and refresh token is missing', async () => {
+        const past = Math.floor(Date.now() / 1000) - 60
+        const store = memoryStore({ token: makeJwt(past) })
+        const authService: AuthService = { getRefreshToken: vi.fn() }
+        const provider = createTokenProvider({ store, authService })
+
+        await expect(provider.getAccessToken()).rejects.toBeInstanceOf(SessionExpiredError)
+        expect(authService.getRefreshToken).not.toHaveBeenCalled()
+    })
+
+    it('throws SessionExpiredError when refresh token is also expired', async () => {
+        const past = Math.floor(Date.now() / 1000) - 60
+        const store = memoryStore({ token: makeJwt(past), refresh_token: makeJwt(past) })
+        const authService: AuthService = { getRefreshToken: vi.fn() }
+        const provider = createTokenProvider({ store, authService })
+
+        await expect(provider.getAccessToken()).rejects.toBeInstanceOf(SessionExpiredError)
+        expect(authService.getRefreshToken).not.toHaveBeenCalled()
+    })
 })

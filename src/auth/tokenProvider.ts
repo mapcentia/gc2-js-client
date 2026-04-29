@@ -7,7 +7,7 @@
 
 import { jwtDecode } from '../util/jwt-decode'
 import type { JwtPayload } from '../util/jwt-decode'
-import type { AuthService, TokenProvider, TokenStore } from './types'
+import type { AuthService, StoredCredentials, TokenProvider, TokenStore } from './types'
 import { NotLoggedInError, SessionExpiredError } from './errors'
 
 const DEFAULT_SKEW_SECONDS = 30
@@ -23,11 +23,19 @@ export function createTokenProvider(opts: CreateTokenProviderOptions): TokenProv
 
     return {
         async getAccessToken(): Promise<string> {
-            const { token } = await opts.store.get()
-            if (!token) throw new NotLoggedInError()
-            if (!isExpired(token, skew)) return token
-            // Refresh path implemented in later tasks.
-            throw new SessionExpiredError()
+            const creds = await opts.store.get()
+            if (!creds.token) throw new NotLoggedInError()
+            if (!isExpired(creds.token, skew)) return creds.token
+
+            if (!creds.refresh_token || isExpired(creds.refresh_token, skew)) {
+                throw new SessionExpiredError()
+            }
+
+            const refreshed = await opts.authService.getRefreshToken(creds.refresh_token)
+            const patch: Partial<StoredCredentials> = { token: refreshed.access_token }
+            if (refreshed.refresh_token) patch.refresh_token = refreshed.refresh_token
+            await opts.store.set(patch)
+            return refreshed.access_token
         },
     }
 }
