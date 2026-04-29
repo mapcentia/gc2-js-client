@@ -43,4 +43,13 @@ describe('createTokenProvider', () => {
         expect(authService.getRefreshToken).not.toHaveBeenCalled()
         expect(store._writes).toHaveLength(0)
     })
+
+    it('throws NotLoggedInError when the store has no access token', async () => {
+        const store = memoryStore({})
+        const authService: AuthService = { getRefreshToken: vi.fn() }
+        const provider = createTokenProvider({ store, authService })
+
+        await expect(provider.getAccessToken()).rejects.toBeInstanceOf(NotLoggedInError)
+        expect(authService.getRefreshToken).not.toHaveBeenCalled()
+    })
 })
