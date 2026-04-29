@@ -43,4 +43,42 @@ describe('createConfigstoreTokenStore', () => {
             host: 'https://h.example',
         })
     })
+
+    it('persists a patch and merges with existing data', async () => {
+        const store = createConfigstoreTokenStore('gc2-test-3')
+        await store.set({ token: 'a', refresh_token: 'b' })
+        await store.set({ token: 'c', host: 'h' })
+
+        await expect(store.get()).resolves.toEqual({
+            token: 'c',
+            refresh_token: 'b',
+            host: 'h',
+        })
+    })
+
+    it('writes valid JSON to the configstore file', async () => {
+        const store = createConfigstoreTokenStore('gc2-test-4')
+        await store.set({ token: 'tok', refresh_token: 'ref' })
+
+        const { readFileSync } = await import('node:fs')
+        const raw = readFileSync(configstorePath('gc2-test-4'), 'utf8')
+        const parsed = JSON.parse(raw)
+        expect(parsed.token).toBe('tok')
+        expect(parsed.refresh_token).toBe('ref')
+    })
+
+    it('serializes concurrent in-process set() calls', async () => {
+        const store = createConfigstoreTokenStore('gc2-test-5')
+        await Promise.all([
+            store.set({ token: 'one' }),
+            store.set({ refresh_token: 'two' }),
+            store.set({ host: 'three' }),
+        ])
+
+        await expect(store.get()).resolves.toEqual({
+            token: 'one',
+            refresh_token: 'two',
+            host: 'three',
+        })
+    })
 })
