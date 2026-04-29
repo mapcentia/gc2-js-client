@@ -141,4 +141,28 @@ describe('createTokenProvider', () => {
         expect(refreshFn).toHaveBeenCalledTimes(1)
         expect(store._writes).toHaveLength(1)
     })
+
+    it('clears the in-flight slot on refresh failure so the next call retries', async () => {
+        const past = Math.floor(Date.now() / 1000) - 60
+        const future = Math.floor(Date.now() / 1000) + 3600
+        const store = memoryStore({ token: makeJwt(past), refresh_token: makeJwt(future) })
+        const newAccess = makeJwt(future)
+        const refreshFn = vi.fn()
+            .mockRejectedValueOnce(new Error('network'))
+            .mockResolvedValueOnce({
+                access_token: newAccess,
+                refresh_token: makeJwt(future),
+                expires_in: 3600,
+                refresh_expires_in: 86400,
+                token_type: 'Bearer',
+                'not-before-policy': 0,
+                session_state: 's',
+                scope: '',
+            })
+        const provider = createTokenProvider({ store, authService: { getRefreshToken: refreshFn } })
+
+        await expect(provider.getAccessToken()).rejects.toThrow('network')
+        await expect(provider.getAccessToken()).resolves.toBe(newAccess)
+        expect(refreshFn).toHaveBeenCalledTimes(2)
+    })
 })
