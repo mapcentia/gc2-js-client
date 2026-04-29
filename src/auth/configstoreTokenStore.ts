@@ -13,17 +13,34 @@ const LOCK_RETRY_MAX_MS = 500
 const LOCK_STALE_MS = 10_000
 
 /**
- * File-backed TokenStore using `configstore` (~/.config/configstore/<name>.json)
- * with cross-process advisory locking via `proper-lockfile`.
+ * Build a Node-only file-backed {@link TokenStore} that persists OAuth
+ * credentials at `~/.config/configstore/<name>.json` (or
+ * `$XDG_CONFIG_HOME/configstore/<name>.json` if set), with both in-process
+ * and cross-process write safety.
  *
- * In-process correctness: a serial promise chain on `set()` ensures concurrent
- * same-process calls do not race on the shared configstore cache.
+ * **Shared-state intent.** The `name` is the file name on disk. Two processes
+ * (e.g. `gc2-cli` and a local MCP server) that pass the same name share the
+ * same on-disk credentials and therefore the same login session. The default
+ * `'gc2-env'` matches the name `gc2-cli` already uses, so a one-time
+ * `gc2 login` is observable to every process that calls
+ * `createConfigstoreTokenStore()` with no argument. Pass a different name
+ * to isolate.
  *
- * Cross-process correctness: `proper-lockfile` serializes the read-merge-write
- * critical section across processes.
+ * **In-process correctness.** A serial promise chain on `set()` ensures
+ * concurrent same-process calls do not race on the shared configstore cache.
  *
- * Node-only. The dynamic imports keep `configstore` and `proper-lockfile` out
- * of browser bundles even when this module is imported through the SDK barrel.
+ * **Cross-process correctness.** `proper-lockfile` serializes the
+ * read-merge-write critical section across processes so two simultaneous
+ * `set()` calls from different processes cannot corrupt the file.
+ *
+ * **Node-only.** The dynamic imports keep `configstore` and `proper-lockfile`
+ * out of browser bundles even when this module is imported through the SDK
+ * barrel. Calling this function in a browser environment will fail at
+ * runtime when the deferred `await import('configstore')` cannot resolve.
+ *
+ * @param name - configstore file name (without `.json`). Default `'gc2-env'`
+ *               matches `gc2-cli`'s configstore so credentials are shared.
+ * @returns A {@link TokenStore} suitable for passing to {@link createTokenProvider}.
  */
 export function createConfigstoreTokenStore(name = 'gc2-env'): TokenStore {
     let configstoreInstance: any | null = null
@@ -35,8 +52,12 @@ export function createConfigstoreTokenStore(name = 'gc2-env'): TokenStore {
         const Configstore: any = (mod as any).default ?? mod
         const { homedir } = await import('node:os')
         const { join } = await import('node:path')
-        // Resolve XDG_CONFIG_HOME at call time (not at module-load time) so
-        // that test fixtures setting process.env.XDG_CONFIG_HOME are respected.
+        // Resolve XDG_CONFIG_HOME at call time (not at module-load time):
+        // configstore@7's transitive xdg-basedir snapshots the env var when
+        // first imported, which would ignore per-test mutations and (more
+        // importantly) couple our path to xdg-basedir's caching across
+        // process lifetimes. Computing configPath ourselves keeps the
+        // SDK's storage location stable regardless of dep version churn.
         const xdgConfig = process.env.XDG_CONFIG_HOME || join(homedir(), '.config')
         const configPath = join(xdgConfig, 'configstore', `${name}.json`)
         configstoreInstance = new Configstore(name, undefined, { configPath })
