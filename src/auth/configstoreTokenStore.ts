@@ -5,9 +5,6 @@
  *
  */
 
-import { mkdirSync, writeFileSync } from 'node:fs'
-import { homedir } from 'node:os'
-import { dirname, join } from 'node:path'
 import type { StoredCredentials, TokenStore } from './types'
 
 const LOCK_RETRIES = 5
@@ -36,6 +33,8 @@ export function createConfigstoreTokenStore(name = 'gc2-env'): TokenStore {
         if (configstoreInstance) return configstoreInstance
         const mod = await import('configstore')
         const Configstore: any = (mod as any).default ?? mod
+        const { homedir } = await import('node:os')
+        const { join } = await import('node:path')
         // Resolve XDG_CONFIG_HOME at call time (not at module-load time) so
         // that test fixtures setting process.env.XDG_CONFIG_HOME are respected.
         const xdgConfig = process.env.XDG_CONFIG_HOME || join(homedir(), '.config')
@@ -68,6 +67,8 @@ export function createConfigstoreTokenStore(name = 'gc2-env'): TokenStore {
         // Ensure the file (and its directory) exist so proper-lockfile has
         // something to anchor on. `wx` is atomic create-if-not-exists, so this
         // is safe even if another process is racing to create the same file.
+        const { mkdirSync, writeFileSync } = await import('node:fs')
+        const { dirname } = await import('node:path')
         try {
             mkdirSync(dirname(filePath), { recursive: true })
             writeFileSync(filePath, '{}', { flag: 'wx' })
