@@ -166,3 +166,13 @@ describe('createTokenProvider', () => {
         expect(refreshFn).toHaveBeenCalledTimes(2)
     })
 })
+
+describe('public exports', () => {
+    it('re-exports auth surface from the package barrel', async () => {
+        const sdk = await import('../index')
+        expect(typeof sdk.createTokenProvider).toBe('function')
+        expect(typeof sdk.createConfigstoreTokenStore).toBe('function')
+        expect(sdk.NotLoggedInError).toBeDefined()
+        expect(sdk.SessionExpiredError).toBeDefined()
+    })
+})
