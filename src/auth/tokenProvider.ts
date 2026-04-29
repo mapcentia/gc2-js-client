@@ -20,6 +20,15 @@ export interface CreateTokenProviderOptions {
 
 export function createTokenProvider(opts: CreateTokenProviderOptions): TokenProvider {
     const skew = opts.expirySkewSeconds ?? DEFAULT_SKEW_SECONDS
+    let inFlight: Promise<string> | null = null
+
+    async function refresh(refreshToken: string): Promise<string> {
+        const refreshed = await opts.authService.getRefreshToken(refreshToken)
+        const patch: Partial<StoredCredentials> = { token: refreshed.access_token }
+        if (refreshed.refresh_token) patch.refresh_token = refreshed.refresh_token
+        await opts.store.set(patch)
+        return refreshed.access_token
+    }
 
     return {
         async getAccessToken(): Promise<string> {
@@ -31,11 +40,10 @@ export function createTokenProvider(opts: CreateTokenProviderOptions): TokenProv
                 throw new SessionExpiredError()
             }
 
-            const refreshed = await opts.authService.getRefreshToken(creds.refresh_token)
-            const patch: Partial<StoredCredentials> = { token: refreshed.access_token }
-            if (refreshed.refresh_token) patch.refresh_token = refreshed.refresh_token
-            await opts.store.set(patch)
-            return refreshed.access_token
+            if (!inFlight) {
+                inFlight = refresh(creds.refresh_token).finally(() => { inFlight = null })
+            }
+            return inFlight
         },
     }
 }

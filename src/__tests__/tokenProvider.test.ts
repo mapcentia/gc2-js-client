@@ -104,4 +104,41 @@ describe('createTokenProvider', () => {
         await expect(provider.getAccessToken()).rejects.toBeInstanceOf(SessionExpiredError)
         expect(authService.getRefreshToken).not.toHaveBeenCalled()
     })
+
+    it('deduplicates concurrent getAccessToken calls during refresh', async () => {
+        const past = Math.floor(Date.now() / 1000) - 60
+        const future = Math.floor(Date.now() / 1000) + 3600
+        const oldAccess = makeJwt(past)
+        const oldRefresh = makeJwt(future)
+        const newAccess = makeJwt(future)
+
+        const store = memoryStore({ token: oldAccess, refresh_token: oldRefresh })
+        const refreshFn = vi.fn(async () => {
+            await new Promise(r => setTimeout(r, 20))
+            return {
+                access_token: newAccess,
+                refresh_token: oldRefresh,
+                expires_in: 3600,
+                refresh_expires_in: 86400,
+                token_type: 'Bearer',
+                'not-before-policy': 0,
+                session_state: 's',
+                scope: '',
+            }
+        })
+        const authService: AuthService = { getRefreshToken: refreshFn }
+
+        const provider = createTokenProvider({ store, authService })
+        const [a, b, c] = await Promise.all([
+            provider.getAccessToken(),
+            provider.getAccessToken(),
+            provider.getAccessToken(),
+        ])
+
+        expect(a).toBe(newAccess)
+        expect(b).toBe(newAccess)
+        expect(c).toBe(newAccess)
+        expect(refreshFn).toHaveBeenCalledTimes(1)
+        expect(store._writes).toHaveLength(1)
+    })
 })
