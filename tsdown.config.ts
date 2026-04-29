@@ -9,6 +9,7 @@ export default defineConfig({
     },
     target: "es2017",
     platform: "browser",
+    external: ['configstore', 'proper-lockfile'],
     exports: {
         devExports: false,
     },
