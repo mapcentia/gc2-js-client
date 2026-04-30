@@ -11,6 +11,9 @@ export interface StoredCredentials {
     token?: string
     refresh_token?: string
     host?: string
+    user?: string
+    database?: string
+    superUser?: boolean
 }
 
 export interface TokenStore {
