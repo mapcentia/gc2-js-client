@@ -15,10 +15,13 @@ export default class Meta {
         this.client = client ?? getLegacyClient();
     }
 
-    async query(rel: string): Promise<any> {
+    async query(rel: string, options?: { noRestriction?: boolean }): Promise<any> {
         return this.client.request({
             path: `api/v4/meta/${rel}`,
             method: 'GET',
+            query: options?.noRestriction !== undefined
+                ? { noRestriction: String(options.noRestriction) }
+                : undefined,
         });
     }
 }
