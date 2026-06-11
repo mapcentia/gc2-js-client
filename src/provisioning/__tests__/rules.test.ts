@@ -86,9 +86,8 @@ describe('Rules', () => {
     expect(JSON.parse(init.body as string)).toEqual(body);
   });
 
-  it('patchRule sends PATCH to correct path', async () => {
-    const updated = { id: 5, access: 'deny' };
-    const fetchFn = mockFetch(200, updated);
+  it('patchRule sends PATCH 303 and returns location', async () => {
+    const fetchFn = mockFetch(303, null, { location: '/api/v4/rules/5' });
     const client = createClient(fetchFn);
 
     const result = await client.provisioning.rules.patchRule(5, { access: 'deny' });
@@ -97,7 +96,7 @@ describe('Rules', () => {
     expect(url).toBe('https://api.example.com/api/v4/rules/5');
     expect(init.method).toBe('PATCH');
     expect(JSON.parse(init.body as string)).toEqual({ access: 'deny' });
-    expect(result).toEqual(updated);
+    expect(result.location).toBe('/api/v4/rules/5');
   });
 
   it('deleteRule sends DELETE 204', async () => {
