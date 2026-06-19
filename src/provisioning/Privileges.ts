@@ -6,6 +6,7 @@
 
 import type { CentiaHttpClient } from '../http/client';
 import type {
+  LocationResponse,
   PatchPrivilegeRequest,
   PrivilegeInfo,
 } from './types';
@@ -20,11 +21,13 @@ export default class Privileges {
     });
   }
 
-  async patchPrivileges(schema: string, table: string, body: PatchPrivilegeRequest | PatchPrivilegeRequest[]): Promise<PrivilegeInfo[]> {
-    return this.client.request<PrivilegeInfo[]>({
+  async patchPrivileges(schema: string, table: string, body: PatchPrivilegeRequest | PatchPrivilegeRequest[]): Promise<LocationResponse> {
+    const res = await this.client.requestFull({
       path: `api/v4/schemas/${encodeURIComponent(schema)}/tables/${encodeURIComponent(table)}/privileges`,
       method: 'PATCH',
       body,
+      expectedStatus: 303,
     });
+    return { location: res.getHeader('Location') ?? '' };
   }
 }
