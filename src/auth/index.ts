@@ -7,7 +7,6 @@
 
 export { createTokenProvider } from './tokenProvider'
 export type { CreateTokenProviderOptions } from './tokenProvider'
-export { createConfigstoreTokenStore } from './configstoreTokenStore'
 export { NotLoggedInError, SessionExpiredError } from './errors'
 export type {
     StoredCredentials,

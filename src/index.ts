@@ -127,7 +127,6 @@ export type { RowOfApiCall, RowsOfApiCall, RowOfApiMethod, RowsOfApiMethod, Para
 
 export {
     createTokenProvider,
-    createConfigstoreTokenStore,
     NotLoggedInError,
     SessionExpiredError,
 } from './auth'

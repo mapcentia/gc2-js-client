@@ -168,11 +168,20 @@ describe('createTokenProvider', () => {
 })
 
 describe('public exports', () => {
-    it('re-exports auth surface from the package barrel', async () => {
+    it('re-exports browser-safe auth surface from the package barrel', async () => {
         const sdk = await import('../index')
         expect(typeof sdk.createTokenProvider).toBe('function')
-        expect(typeof sdk.createConfigstoreTokenStore).toBe('function')
         expect(sdk.NotLoggedInError).toBeDefined()
         expect(sdk.SessionExpiredError).toBeDefined()
+    })
+
+    it('does not expose the Node-only token store on the main entry', async () => {
+        const sdk = await import('../index')
+        expect((sdk as Record<string, unknown>).createConfigstoreTokenStore).toBeUndefined()
+    })
+
+    it('exposes createConfigstoreTokenStore from the node entry', async () => {
+        const node = await import('../node')
+        expect(typeof node.createConfigstoreTokenStore).toBe('function')
     })
 })
