@@ -367,18 +367,20 @@ export interface RpcMethodInfo {
 // ===== Metadata types =====
 
 export interface MetadataFieldInfo {
-  alias?: string;
+  // `null` clears the field; the API accepts it, so allow it here.
+  alias?: string | null;
   queryable?: boolean;
-  sort_id?: number;
+  sort_id?: number | null;
 }
 
 export interface MetadataRelationInfo {
-  title?: string;
-  abstract?: string;
-  group?: string;
-  sort_id?: number;
-  tags?: string[];
-  properties?: Record<string, unknown>;
+  // `null` clears the field; the API accepts it, so allow it here.
+  title?: string | null;
+  abstract?: string | null;
+  group?: string | null;
+  sort_id?: number | null;
+  tags?: string[] | null;
+  properties?: Record<string, unknown> | null;
   fields?: Record<string, MetadataFieldInfo>;
 }
 
