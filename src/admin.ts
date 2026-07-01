@@ -17,6 +17,7 @@ import ProvisioningClients from './provisioning/Clients';
 import Rules from './provisioning/Rules';
 import Privileges from './provisioning/Privileges';
 import RpcMethods from './provisioning/RpcMethods';
+import Functions from './provisioning/Functions';
 import MetadataWrite from './provisioning/MetadataWrite';
 import TypeScriptInterfaces from './provisioning/TypeScriptInterfaces';
 import FileImport from './provisioning/FileImport';
@@ -39,6 +40,7 @@ export interface CentiaAdminClient {
     readonly rules: Rules;
     readonly privileges: Privileges;
     readonly rpcMethods: RpcMethods;
+    readonly functions: Functions;
     readonly metadata: MetadataWrite;
     readonly typeScript: TypeScriptInterfaces;
     readonly fileImport: FileImport;
@@ -74,6 +76,7 @@ export function createCentiaAdminClient(config: CentiaClientConfig): CentiaAdmin
       rules: new Rules(http),
       privileges: new Privileges(http),
       rpcMethods: new RpcMethods(http),
+      functions: new Functions(http),
       metadata: new MetadataWrite(http),
       typeScript: new TypeScriptInterfaces(http),
       fileImport: new FileImport(http),

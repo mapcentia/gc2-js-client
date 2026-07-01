@@ -364,6 +364,103 @@ export interface RpcMethodInfo {
   type_hints?: Record<string, unknown>;
 }
 
+// ===== Function types =====
+
+export type FunctionRuntime = 'nodejs20' | 'python312';
+export type FunctionPackage = 'inline' | 'zip';
+export type FunctionStatus = 'pending' | 'running' | 'succeeded' | 'failed';
+export type FunctionEventOp = 'insert' | 'update' | 'delete';
+
+export interface FunctionTriggers {
+  /** Cron expression (five fields). */
+  schedule?: string;
+  /** Run on row changes to a `schema.table`. */
+  event?: { table: string; on?: FunctionEventOp[] };
+}
+
+export interface CreateFunctionRequest {
+  name: string;
+  runtime: FunctionRuntime;
+  handler: string;
+  /** Inline source, or a base64-encoded zip when `package` is `'zip'`. */
+  code: string;
+  package?: FunctionPackage;
+  env?: Record<string, string>;
+  memory_mb?: number;
+  timeout_s?: number;
+  triggers?: FunctionTriggers;
+}
+
+export interface PatchFunctionRequest {
+  name?: string;
+  runtime?: FunctionRuntime;
+  handler?: string;
+  code?: string;
+  package?: FunctionPackage;
+  env?: Record<string, string>;
+  memory_mb?: number;
+  timeout_s?: number;
+  triggers?: FunctionTriggers;
+}
+
+export interface FunctionInfo {
+  name: string;
+  runtime: FunctionRuntime;
+  handler: string;
+  package: FunctionPackage;
+  code: string;
+  env?: Record<string, string> | null;
+  memory_mb?: number | null;
+  timeout_s?: number | null;
+  triggers?: FunctionTriggers | null;
+  input_schema?: unknown;
+  output_schema?: unknown;
+  version?: number | null;
+  created?: string | null;
+  updated?: string | null;
+}
+
+/** Result of a synchronous invocation. */
+export interface FunctionInvocationResult {
+  invocation: string;
+  status: FunctionStatus;
+  result?: unknown;
+  logs?: string | null;
+  duration_ms?: number | null;
+}
+
+/** 202 response when invoking asynchronously. */
+export interface AsyncInvocationAccepted {
+  invocation: string;
+  status: 'pending';
+  _links?: { self: string };
+}
+
+/** Result of a dry-run (infers + stores input/output schemas). */
+export interface DryRunResult {
+  dry_run: true;
+  status: FunctionStatus;
+  result?: unknown;
+  logs?: string | null;
+  error?: string | null;
+  input_schema?: unknown;
+  output_schema?: unknown;
+}
+
+/** A stored invocation record (from GET .../invocations/{id}). */
+export interface FunctionInvocationRecord {
+  invocation: string;
+  function: string;
+  status: FunctionStatus;
+  request?: unknown;
+  response?: unknown;
+  logs?: string | null;
+  error?: string | null;
+  duration_ms?: number | null;
+  created?: string | null;
+  finished?: string | null;
+}
+
 // ===== Metadata types =====
 
 export interface MetadataFieldInfo {
