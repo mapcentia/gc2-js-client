@@ -15,6 +15,7 @@ import ProvisioningTables from './provisioning/Tables';
 import ProvisioningUsers from './provisioning/Users';
 import ProvisioningClients from './provisioning/Clients';
 import Rules from './provisioning/Rules';
+import Layers from './provisioning/Layers';
 import Privileges from './provisioning/Privileges';
 import RpcMethods from './provisioning/RpcMethods';
 import MetadataWrite from './provisioning/MetadataWrite';
@@ -26,7 +27,7 @@ import GitCommit from './provisioning/GitCommit';
 export interface CentiaAdminClient {
   /** The underlying HTTP client. */
   readonly http: CentiaHttpClient;
-  /** Schema, table, column, constraint, index, sequence, user, client, rule, privilege, RPC, metadata, file import, git, and SQL management. */
+  /** Schema, table, column, constraint, index, sequence, user, client, rule, privilege, RPC, layer, metadata, file import, git, and SQL management. */
   readonly provisioning: {
     readonly schemas: Schemas;
     readonly tables: ProvisioningTables;
@@ -37,6 +38,7 @@ export interface CentiaAdminClient {
     readonly users: ProvisioningUsers;
     readonly clients: ProvisioningClients;
     readonly rules: Rules;
+    readonly layers: Layers;
     readonly privileges: Privileges;
     readonly rpcMethods: RpcMethods;
     readonly metadata: MetadataWrite;
@@ -72,6 +74,7 @@ export function createCentiaAdminClient(config: CentiaClientConfig): CentiaAdmin
       users: new ProvisioningUsers(http),
       clients: new ProvisioningClients(http),
       rules: new Rules(http),
+      layers: new Layers(http),
       privileges: new Privileges(http),
       rpcMethods: new RpcMethods(http),
       metadata: new MetadataWrite(http),

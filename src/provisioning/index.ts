@@ -12,6 +12,7 @@ export { default as Sequences } from './Sequences';
 export { default as ProvisioningUsers } from './Users';
 export { default as ProvisioningClients } from './Clients';
 export { default as Rules } from './Rules';
+export { default as Layers } from './Layers';
 export { default as Privileges } from './Privileges';
 export { default as RpcMethods } from './RpcMethods';
 export { default as MetadataWrite } from './MetadataWrite';
@@ -67,6 +68,20 @@ export type {
   CreateRuleRequest,
   PatchRuleRequest,
   RuleInfo,
+  // Layer
+  LayerGeotype,
+  LayerTileFormat,
+  LayerCacheType,
+  LabelPosition,
+  FontWeight,
+  LineCap,
+  GeomTransform,
+  LayerProperties,
+  Style,
+  Label,
+  LayerClass,
+  Layer,
+  GetLayerOptions,
   // Privilege
   PrivilegeLevel,
   PatchPrivilegeRequest,

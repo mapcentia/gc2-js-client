@@ -363,6 +363,75 @@ Notes:
 - `createApi<T>()` relies on naming conventions: the property name is the JSON‑RPC `method` name.
 - Each call returns `result.data` from the RPC response (array of rows).
 
+## Layer styling (admin client)
+
+Layer configuration (properties, classes, styles and labels — MapServer-backed cartography) is managed through the admin client:
+
+```ts
+import { createCentiaAdminClient } from '@centia-io/sdk'
+
+const client = createCentiaAdminClient({
+  baseUrl: 'https://example.centia.io',
+  auth: { getAccessToken: async () => token },
+})
+
+const layers = client.provisioning.layers
+
+// List layer keys
+const names = await layers.getLayer(undefined, { namesOnly: true })
+
+// Read a full layer definition (properties + classes with styles/labels)
+const layer = await layers.getLayer('my_schema.my_table.the_geom')
+
+// Update layer properties (key-merge)
+await layers.patchLayer('my_schema.my_table.the_geom', {
+  name: 'my_schema.my_table.the_geom',
+  properties: { opacity: '80', geotype: 'POLYGON' },
+})
+
+// Classes, styles and labels have their own CRUD methods
+const { location } = await layers.postLayerClass('my_schema.my_table.the_geom', {
+  name: 'Roads',
+  expression: "[type]='road'",
+})
+await layers.postStyle('my_schema.my_table.the_geom', 'a1b2c3d4', { color: '#008000', width: '2' })
+await layers.postLabel('my_schema.my_table.the_geom', 'a1b2c3d4', { text: '[name]', on: true })
+```
+
+## OGC services (OWS / WFS)
+
+`Ows` and `Wfs` wrap the OGC endpoints and take a `CentiaHttpClient`:
+
+```ts
+import { createCentiaClient, Ows, Wfs } from '@centia-io/sdk'
+
+const http = createCentiaClient({
+  baseUrl: 'https://example.centia.io',
+  auth: { getAccessToken: async () => token },
+})
+
+// Token-authenticated WFS
+const wfs = new Wfs(http)
+const capabilities = await wfs.getWfs('my_schema', { REQUEST: 'GetCapabilities' })
+const gml = await wfs.getWfs(
+  'my_schema',
+  { REQUEST: 'GetFeature', TYPENAME: 'my_table', MAXFEATURES: 100 },
+  { srs: 25832 }, // optional output SRID (and optional timeSlice for versioned layers)
+)
+
+// WFS-T transactions are posted as XML
+await wfs.postWfs('my_schema', '<wfs:Transaction>…</wfs:Transaction>')
+
+// Generic OWS (WMS/WFS/UTFGRID)
+const ows = new Ows(http)
+const wmsCaps = await ows.getOws('my_schema', { SERVICE: 'WMS', REQUEST: 'GetCapabilities' })
+
+// Anonymous / HTTP-Basic access uses the ...NoToken variants with the database in the path
+const anonCaps = await wfs.getWfsNoToken('my_schema', 'my_database', { REQUEST: 'GetCapabilities' })
+```
+
+Responses are returned as XML text (or parsed JSON for JSON formats such as UTFGRID). Binary responses like WMS `GetMap` images are not supported by these wrappers.
+
 ## Error handling
 
 - Network/HTTP errors: thrown as `Error` with the status/body text when available.

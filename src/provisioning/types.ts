@@ -419,6 +419,125 @@ export interface FileProcessResponse {
   error: string;
 }
 
+// ===== Layer types =====
+
+export type LayerGeotype = 'Default' | 'POINT' | 'LINE' | 'POLYGON';
+export type LayerTileFormat = 'PNG' | 'jpeg_low' | 'jpeg_medium' | 'jpeg_high';
+export type LayerCacheType = 'disk' | 'sqlite' | 's3' | 'memcache';
+export type LabelPosition = 'auto' | 'ul' | 'uc' | 'ur' | 'cl' | 'cc' | 'cr' | 'll' | 'lc' | 'lr';
+export type FontWeight = 'normal' | 'bold' | 'italic' | 'bolditalic';
+export type LineCap = 'round' | 'butt' | 'square';
+export type GeomTransform = 'bbox' | 'centroid' | 'end' | 'labelpnt' | 'labelpoly' | 'start' | 'vertices';
+
+/** Layer properties (the def JSON). Numeric values are stored as strings, empty string when unset. */
+export interface LayerProperties {
+  theme_column?: string;
+  label_column?: string;
+  opacity?: string;
+  label_max_scale?: string;
+  label_min_scale?: string;
+  cluster?: string;
+  meta_tiles?: string;
+  meta_size?: string;
+  meta_buffer?: string;
+  ttl?: string;
+  auto_expire?: string;
+  maxscaledenom?: string;
+  minscaledenom?: string;
+  symbolscaledenom?: string;
+  geotype?: LayerGeotype;
+  offsite?: string;
+  format?: LayerTileFormat;
+  lock?: boolean;
+  layers?: string;
+  bands?: string;
+  cache?: LayerCacheType;
+  s3_tile_set?: string;
+  label_no_clip?: boolean;
+  polyline_no_clip?: boolean;
+}
+
+/** Style entry of a class. Property keys follow MapServer STYLE parameters. */
+export interface Style {
+  id?: string;
+  sortid?: number;
+  name?: string;
+  color?: string;
+  width?: string;
+  outlinecolor?: string;
+  symbol?: string;
+  size?: string;
+  angle?: string;
+  gap?: string;
+  opacity?: string;
+  pattern?: string;
+  linecap?: LineCap;
+  geomtransform?: GeomTransform;
+  minsize?: string;
+  maxsize?: string;
+  offsetx?: string;
+  offsety?: string;
+  polaroffsetr?: string;
+  polaroffsetd?: string;
+}
+
+/** Label entry of a class. Property keys follow MapServer LABEL parameters. */
+export interface Label {
+  id?: string;
+  sortid?: number;
+  name?: string;
+  on?: boolean;
+  text?: string;
+  force?: boolean;
+  minscaledenom?: string;
+  maxscaledenom?: string;
+  position?: LabelPosition;
+  size?: string;
+  color?: string;
+  outlinecolor?: string;
+  buffer?: string;
+  repeatdistance?: string;
+  angle?: string;
+  backgroundcolor?: string;
+  backgroundpadding?: string;
+  offsetx?: string;
+  offsety?: string;
+  font?: string;
+  fontweight?: FontWeight;
+  expression?: string;
+  maxsize?: string;
+  minfeaturesize?: string;
+}
+
+/** Class definition with styles and labels. */
+export interface LayerClass {
+  id?: string;
+  name?: string;
+  sortid?: number;
+  expression?: string;
+  styles?: Style[];
+  labels?: Label[];
+  minscaledenom?: string;
+  maxscaledenom?: string;
+  leader?: boolean;
+  leader_gridstep?: string;
+  leader_maxdistance?: string;
+  leader_color?: string;
+}
+
+/** Layer definition: properties (the def JSON) and classes with styles and labels. */
+export interface Layer {
+  /** Layer key: schema.table.geometry_column. */
+  name: string;
+  properties?: LayerProperties;
+  classes?: LayerClass[];
+}
+
+export interface GetLayerOptions {
+  /** Return only layer keys. */
+  namesOnly?: boolean;
+}
+
 // ===== Git Commit types =====
 
 export interface CommitRequest {

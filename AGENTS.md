@@ -45,7 +45,8 @@ Classes instantiated without arguments: `Sql`, `SqlNoToken`, `Rpc`, `Gql`, `Meta
 ### 2. Explicit-client layer (dependency-injected, used by new code)
 
 - `createCentiaClient(config)` → `CentiaHttpClient` (`src/http/client.ts`): takes `baseUrl`, auth callbacks (`getAccessToken` / `getHeaders`), and an injectable `fetch` (this is how all provisioning tests mock the network). Non-expected statuses throw `CentiaApiError` (`src/http/errors.ts`) carrying status/code/details/requestId. Handles `redirect: 'manual'` quirks: browsers return opaque-redirect responses for the 303-with-Location pattern the API uses.
-- `createCentiaAdminClient(config)` (`src/admin.ts`) wraps a `CentiaHttpClient` with one resource class per provisioning area (`src/provisioning/`: Schemas, Tables, Columns, Constraints, Indices, Sequences, Users, Clients, Rules, Privileges, RpcMethods, MetadataWrite, TypeScriptInterfaces, FileImport, GitCommit). Each class takes the http client in its constructor and maps to `/api/v4/...` endpoints.
+- `createCentiaAdminClient(config)` (`src/admin.ts`) wraps a `CentiaHttpClient` with one resource class per provisioning area (`src/provisioning/`: Schemas, Tables, Columns, Constraints, Indices, Sequences, Users, Clients, Rules, Layers, Privileges, RpcMethods, MetadataWrite, TypeScriptInterfaces, FileImport, GitCommit). Each class takes the http client in its constructor and maps to `/api/v4/...` endpoints.
+- OGC service wrappers (`src/ogc/`: `Ows`, `Wfs`) follow the same explicit-client pattern — instantiated with a `CentiaHttpClient` — but are exported standalone from the barrel rather than via the admin client, since they are runtime data services, not provisioning.
 
 New endpoint wrappers should follow the explicit-client pattern, not the legacy global-state pattern.
 

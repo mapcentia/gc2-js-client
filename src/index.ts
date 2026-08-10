@@ -24,6 +24,8 @@ import { createSqlBuilder } from "./SqlBuilder"
 import { createCentiaClient } from "./http/client"
 import { CentiaApiError, isCentiaApiError } from "./http/errors"
 import { createCentiaAdminClient } from "./admin"
+import { Ows } from "./ogc/Ows"
+import { Wfs } from "./ogc/Wfs"
 import type {RpcRequest, RpcResponse, GqlRequest, GqlResponse, SqlRequest, SqlResponse} from "./types/pgTypes"
 import type * as PgTypes from "./types/pgTypes"
 import type {Options, CodeFlowOptions, PasswordFlowOptions} from "./util/utils"
@@ -48,6 +50,8 @@ export {
     createSqlBuilder,
     createCentiaClient,
     createCentiaAdminClient,
+    Ows,
+    Wfs,
     CentiaApiError,
     isCentiaApiError,
 }
@@ -105,6 +109,19 @@ export type {
     CreateRuleRequest,
     PatchRuleRequest,
     RuleInfo,
+    LayerGeotype,
+    LayerTileFormat,
+    LayerCacheType,
+    LabelPosition,
+    FontWeight,
+    LineCap,
+    GeomTransform,
+    LayerProperties,
+    Style,
+    Label,
+    LayerClass,
+    Layer,
+    GetLayerOptions,
     PrivilegeLevel,
     PatchPrivilegeRequest,
     PrivilegeInfo,
@@ -121,6 +138,8 @@ export type {
     CommitRequest,
     CommitResult,
 } from "./provisioning";
+export type { OwsParams } from "./ogc/Ows";
+export type { WfsGetParams, WfsPathOptions } from "./ogc/Wfs";
 export type { SqlNoTokenRequest } from "./SqlNoToken";
 export type { DBSchema, TableDef, ColumnDef, RowForTable, PickRow, RowOfSelect, RowsOfSelect, RowOfRequest, RowsOfRequest } from "./SqlBuilder";
 export type { RowOfApiCall, RowsOfApiCall, RowOfApiMethod, RowsOfApiMethod, ParamsOfApiMethod } from "./Api";
