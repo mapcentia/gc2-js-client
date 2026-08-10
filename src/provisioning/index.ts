@@ -15,6 +15,7 @@ export { default as Rules } from './Rules';
 export { default as Layers } from './Layers';
 export { default as Privileges } from './Privileges';
 export { default as RpcMethods } from './RpcMethods';
+export { default as Functions } from './Functions';
 export { default as MetadataWrite } from './MetadataWrite';
 export { default as TypeScriptInterfaces } from './TypeScriptInterfaces';
 export { default as FileImport } from './FileImport';
@@ -90,6 +91,19 @@ export type {
   CreateRpcMethodRequest,
   PatchRpcMethodRequest,
   RpcMethodInfo,
+  // Functions
+  FunctionRuntime,
+  FunctionPackage,
+  FunctionStatus,
+  FunctionEventOp,
+  FunctionTriggers,
+  CreateFunctionRequest,
+  PatchFunctionRequest,
+  FunctionInfo,
+  FunctionInvocationResult,
+  AsyncInvocationAccepted,
+  DryRunResult,
+  FunctionInvocationRecord,
   // Metadata
   MetadataFieldInfo,
   MetadataRelationInfo,
