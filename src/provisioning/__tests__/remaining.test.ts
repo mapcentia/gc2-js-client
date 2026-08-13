@@ -25,9 +25,8 @@ function lastCall(fetchFn: typeof globalThis.fetch) {
 }
 
 describe('MetadataWrite', () => {
-  it('patchMetaData sends PATCH to /meta', async () => {
-    const result = { ok: true };
-    const fetchFn = mockFetch(200, result);
+  it('patchMetaData sends PATCH 303 to /meta and returns location', async () => {
+    const fetchFn = mockFetch(303, null, { location: '/api/v4/meta' });
     const client = createClient(fetchFn);
 
     const res = await client.provisioning.metadata.patchMetaData({
@@ -44,7 +43,7 @@ describe('MetadataWrite', () => {
         'public.cities': { title: 'Cities', abstract: 'World cities' },
       },
     });
-    expect(res).toEqual(result);
+    expect(res).toEqual({ location: '/api/v4/meta' });
   });
 });
 
