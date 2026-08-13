@@ -79,12 +79,14 @@ describe('ProvisioningUsers', () => {
       password: 'Secret123',
       default_user: true,
       properties: { role: 'admin' },
+      user_group: ['editors', 'viewers'],
     });
 
     const [, init] = lastCall(fetchFn);
     const body = JSON.parse(init.body as string);
     expect(body.default_user).toBe(true);
     expect(body.properties).toEqual({ role: 'admin' });
+    expect(body.user_group).toEqual(['editors', 'viewers']);
   });
 
   it('postUser sends POST with array body', async () => {
@@ -109,6 +111,7 @@ describe('ProvisioningUsers', () => {
     const result = await client.provisioning.users.patchUser('alice', {
       email: 'newalice@example.com',
       password: 'NewSecret123',
+      user_group: ['editors'],
     });
 
     const [url, init] = lastCall(fetchFn);
@@ -117,6 +120,7 @@ describe('ProvisioningUsers', () => {
     expect(JSON.parse(init.body as string)).toEqual({
       email: 'newalice@example.com',
       password: 'NewSecret123',
+      user_group: ['editors'],
     });
     expect(result.location).toBe('/api/v4/users/alice');
   });

@@ -215,6 +215,8 @@ export interface CreateUserRequest {
   password: string;
   default_user?: boolean;
   properties?: unknown;
+  /** Group memberships (group screen names). */
+  user_group?: string[] | null;
 }
 
 export interface PatchUserRequest {
@@ -222,14 +224,16 @@ export interface PatchUserRequest {
   password: string | null;
   default_user?: boolean;
   properties?: unknown;
-  user_group?: string;
+  /** Group memberships (group screen names); null clears membership. */
+  user_group?: string[] | null;
 }
 
 export interface UserInfo {
   name: string;
   email: string;
   default_user: boolean;
-  user_group?: string;
+  /** Group memberships (group screen names). */
+  user_group?: string[] | null;
   properties?: unknown;
 }
 
