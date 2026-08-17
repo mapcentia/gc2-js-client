@@ -20,6 +20,7 @@ export { default as MetadataWrite } from './MetadataWrite';
 export { default as TypeScriptInterfaces } from './TypeScriptInterfaces';
 export { default as FileImport } from './FileImport';
 export { default as GitCommit } from './GitCommit';
+export { default as Maps } from './Maps';
 
 export type {
   // Shared
@@ -112,6 +113,8 @@ export type {
   FileUploadOptions,
   FileProcessRequest,
   FileProcessResponse,
+  // Map
+  MapConfig,
   // Git Commit
   CommitRequest,
   CommitResult,

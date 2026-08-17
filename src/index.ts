@@ -122,6 +122,7 @@ export type {
     LayerClass,
     Layer,
     GetLayerOptions,
+    MapConfig,
     PrivilegeLevel,
     PatchPrivilegeRequest,
     PrivilegeInfo,

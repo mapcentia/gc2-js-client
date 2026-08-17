@@ -398,6 +398,21 @@ await layers.postStyle('my_schema.my_table.the_geom', 'a1b2c3d4', { color: '#008
 await layers.postLabel('my_schema.my_table.the_geom', 'a1b2c3d4', { text: '[name]', on: true })
 ```
 
+## Map view configuration (admin client)
+
+Each schema has a map view configuration (initial center, zoom and extent, all in EPSG:3857):
+
+```ts
+const maps = client.provisioning.maps
+
+const view = await maps.getMap('my_schema')
+// { center: [1386651, 7503372], zoom: 12, extent: [1354000, 7478000, 1419000, 7528000] }
+
+// Only the provided properties are updated; null clears a value
+await maps.patchMap('my_schema', { center: [1386651, 7503372], zoom: 12 })
+await maps.patchMap('my_schema', { extent: null })
+```
+
 ## OGC services (OWS / WFS)
 
 `Ows` and `Wfs` wrap the OGC endpoints and take a `CentiaHttpClient`:

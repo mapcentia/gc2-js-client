@@ -16,6 +16,7 @@ import ProvisioningUsers from './provisioning/Users';
 import ProvisioningClients from './provisioning/Clients';
 import Rules from './provisioning/Rules';
 import Layers from './provisioning/Layers';
+import Maps from './provisioning/Maps';
 import Privileges from './provisioning/Privileges';
 import RpcMethods from './provisioning/RpcMethods';
 import Functions from './provisioning/Functions';
@@ -40,6 +41,7 @@ export interface CentiaAdminClient {
     readonly clients: ProvisioningClients;
     readonly rules: Rules;
     readonly layers: Layers;
+    readonly maps: Maps;
     readonly privileges: Privileges;
     readonly rpcMethods: RpcMethods;
     readonly functions: Functions;
@@ -77,6 +79,7 @@ export function createCentiaAdminClient(config: CentiaClientConfig): CentiaAdmin
       clients: new ProvisioningClients(http),
       rules: new Rules(http),
       layers: new Layers(http),
+      maps: new Maps(http),
       privileges: new Privileges(http),
       rpcMethods: new RpcMethods(http),
       functions: new Functions(http),
