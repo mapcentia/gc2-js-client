@@ -643,15 +643,15 @@ export interface GetLayerOptions {
 
 /**
  * Per-schema map view configuration (initial center, zoom and extent).
- * All coordinates are in EPSG:3857. On PATCH, any subset of the properties
- * may be sent; `null` clears a value.
+ * All coordinates are in EPSG:4326 (longitude/latitude). On PATCH, any subset
+ * of the properties may be sent; `null` clears a value.
  */
 export interface MapConfig {
-  /** Map center as [x, y]. */
+  /** Map center as [longitude, latitude]. */
   center?: [number, number] | null;
   /** Initial zoom level. */
   zoom?: number | null;
-  /** Map extent as [minx, miny, maxx, maxy]. */
+  /** Map extent as [minx, miny, maxx, maxy] in degrees. */
   extent?: [number, number, number, number] | null;
 }
 
