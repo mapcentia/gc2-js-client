@@ -60,9 +60,11 @@ export class Mapcache {
    * can be used directly as a tile URL template in OpenLayers, MapLibre or
    * Leaflet, e.g. `tms/1.0.0/my_schema.my_table@g20/{z}/{x}/{y}.png`.
    *
-   * Note that the URL carries no Authorization header — protected tilesets
-   * require the map library to send credentials (HTTP Basic) or the layer to
-   * be anonymously readable.
+   * The endpoint authorizes via the Authorization header (Bearer token or
+   * HTTP Basic) — a token cannot be embedded in the URL itself. For protected
+   * tilesets, inject the header per tile request through the map library's
+   * request hook (e.g. MapLibre's `transformRequest` or OpenLayers'
+   * `tileLoadFunction`).
    */
   mapcacheUrl(database: string, path?: string, params?: MapcacheParams): string {
     let url = `${this.client.baseUrl}/${this.basePath(database, path)}`;

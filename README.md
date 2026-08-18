@@ -463,7 +463,7 @@ const wmtsCaps = await mapcache.getMapcache('my_database', 'wmts/1.0.0/WMTSCapab
 const template = mapcache.mapcacheUrl('my_database', 'tms/1.0.0/my_schema.my_table@g20/{z}/{x}/{y}.png')
 ```
 
-The endpoint accepts anonymous, HTTP Basic and Bearer token requests; tile requests are authorized against the tileset's layer. `mapcacheUrl` carries no Authorization header, so protected tilesets need HTTP Basic credentials from the map library (or an anonymously readable layer).
+The endpoint accepts anonymous, HTTP Basic and Bearer token requests; tile requests are authorized against the tileset's layer. Authorization travels in the `Authorization` header — it cannot be embedded in the URL — so for protected tilesets, inject the header per tile request via the map library's request hook (e.g. MapLibre's `transformRequest` or OpenLayers' `tileLoadFunction`).
 
 ## Error handling
 
