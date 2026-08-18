@@ -76,6 +76,55 @@ describe('Mapcache', () => {
     );
   });
 
+  it('deleteMapcacheTileset sends DELETE 202 and returns the job info', async () => {
+    const job = {
+      success: true,
+      message: 'Tile cache deletion started',
+      uuid: 'abc-123',
+      pid: 4711,
+      tileset: 'my_schema.roads',
+      grid: 'g20',
+      scope: { bbox: null, zoom: null },
+    };
+    const fetchFn = mockFetch(202, JSON.stringify(job));
+    const mapcache = new Mapcache(createHttp(fetchFn));
+
+    const result = await mapcache.deleteMapcacheTileset('my_database', 'my_schema.roads');
+
+    const [url, init] = lastCall(fetchFn);
+    expect(url).toBe('https://api.example.com/api/v4/mapcache/database/my_database/tileset/my_schema.roads');
+    expect(init.method).toBe('DELETE');
+    expect(result).toEqual(job);
+  });
+
+  it('deleteMapcacheTileset scopes by bbox, zoom and grid', async () => {
+    const fetchFn = mockFetch(202, '{"success":true}');
+    const mapcache = new Mapcache(createHttp(fetchFn));
+
+    await mapcache.deleteMapcacheTileset('my_database', 'my_schema.roads.mvt', {
+      bbox: '890000,7260000,1730000,7870000',
+      zoom: '0,12',
+      grid: 'g20',
+    });
+
+    const [url] = lastCall(fetchFn);
+    expect(url).toBe(
+      'https://api.example.com/api/v4/mapcache/database/my_database/tileset/my_schema.roads.mvt?bbox=890000%2C7260000%2C1730000%2C7870000&zoom=0%2C12&grid=g20',
+    );
+  });
+
+  it('deleteMapcacheTileset accepts a single numeric zoom', async () => {
+    const fetchFn = mockFetch(202, '{"success":true}');
+    const mapcache = new Mapcache(createHttp(fetchFn));
+
+    await mapcache.deleteMapcacheTileset('my_database', 'my_schema.roads', { zoom: 8 });
+
+    const [url] = lastCall(fetchFn);
+    expect(url).toBe(
+      'https://api.example.com/api/v4/mapcache/database/my_database/tileset/my_schema.roads?zoom=8',
+    );
+  });
+
   it('mapcacheUrl appends query params', () => {
     const mapcache = new Mapcache(createHttp(mockFetch(200, '')));
 

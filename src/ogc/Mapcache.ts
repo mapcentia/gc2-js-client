@@ -9,6 +9,27 @@ import type { CentiaHttpClient } from '../http/client';
 /** Query parameters for MapCache requests (e.g. WMS key/values). */
 export type MapcacheParams = Record<string, string | number | boolean>;
 
+/** Options scoping a tileset deletion. */
+export interface DeleteMapcacheTilesetOptions {
+  /** Extent to delete: minx,miny,maxx,maxy in the grid SRS. */
+  bbox?: string;
+  /** Zoom range to delete: minzoom,maxzoom (or a single zoom). */
+  zoom?: string | number;
+  /** Grid name (default g20). */
+  grid?: string;
+}
+
+/** 202 response from a tileset deletion: the background job that was started. */
+export interface MapcacheTilesetDeleteResult {
+  success: boolean;
+  message: string;
+  uuid: string;
+  pid: number;
+  tileset: string;
+  grid: string;
+  scope: { bbox: string | null; zoom: string | null };
+}
+
 function toQuery(params?: MapcacheParams): Record<string, string> | undefined {
   if (!params) return undefined;
   const query: Record<string, string> = {};
@@ -66,6 +87,31 @@ export class Mapcache {
    * request hook (e.g. MapLibre's `transformRequest` or OpenLayers'
    * `tileLoadFunction`).
    */
+  /**
+   * Delete a tileset's cached tiles (optionally scoped by extent and zoom).
+   * Runs `mapcache_seed -m delete` as a background job on the server and
+   * returns the started job's info. Requires write/owner authorization for
+   * the tileset's layer.
+   *
+   * `tileset` is the layer "schema.table" (vector variants "schema.table.mvt"/".json").
+   */
+  async deleteMapcacheTileset(
+    database: string,
+    tileset: string,
+    options?: DeleteMapcacheTilesetOptions,
+  ): Promise<MapcacheTilesetDeleteResult> {
+    const query: Record<string, string> = {};
+    if (options?.bbox != null) query.bbox = options.bbox;
+    if (options?.zoom != null) query.zoom = String(options.zoom);
+    if (options?.grid != null) query.grid = options.grid;
+    return this.client.request<MapcacheTilesetDeleteResult>({
+      path: `api/v4/mapcache/database/${encodeURIComponent(database)}/tileset/${encodeURIComponent(tileset)}`,
+      method: 'DELETE',
+      query: Object.keys(query).length > 0 ? query : undefined,
+      expectedStatus: 202,
+    });
+  }
+
   mapcacheUrl(database: string, path?: string, params?: MapcacheParams): string {
     let url = `${this.client.baseUrl}/${this.basePath(database, path)}`;
     const query = toQuery(params);
