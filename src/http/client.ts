@@ -12,7 +12,8 @@ import { CentiaApiError } from './errors';
  * Works in both Node.js and browser environments.
  */
 export class CentiaHttpClient {
-  private readonly baseUrl: string;
+  /** Base URL of the API, without trailing slash. */
+  readonly baseUrl: string;
   private readonly auth: CentiaAuth;
   private readonly fetchFn: typeof globalThis.fetch;
   private readonly userAgent: string | undefined;

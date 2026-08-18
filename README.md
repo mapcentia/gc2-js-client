@@ -447,6 +447,24 @@ const anonCaps = await wfs.getWfsNoToken('my_schema', 'my_database', { REQUEST: 
 
 Responses are returned as XML text (or parsed JSON for JSON formats such as UTFGRID). Binary responses like WMS `GetMap` images are not supported by these wrappers.
 
+### MapCache (tiles: WMTS / TMS / WMS / Google Maps)
+
+`Mapcache` wraps the authorizing MapCache proxy. Use `getMapcache` for text responses such as capabilities documents, and `mapcacheUrl` to build tile URL templates for map libraries:
+
+```ts
+import { createCentiaClient, Mapcache } from '@centia-io/sdk'
+
+const mapcache = new Mapcache(http)
+
+// Capabilities (XML)
+const wmtsCaps = await mapcache.getMapcache('my_database', 'wmts/1.0.0/WMTSCapabilities.xml')
+
+// Tile URL template for OpenLayers / MapLibre / Leaflet — {z}/{x}/{y} is preserved
+const template = mapcache.mapcacheUrl('my_database', 'tms/1.0.0/my_schema.my_table@g20/{z}/{x}/{y}.png')
+```
+
+The endpoint accepts anonymous, HTTP Basic and Bearer token requests; tile requests are authorized against the tileset's layer. `mapcacheUrl` carries no Authorization header, so protected tilesets need HTTP Basic credentials from the map library (or an anonymously readable layer).
+
 ## Error handling
 
 - Network/HTTP errors: thrown as `Error` with the status/body text when available.
