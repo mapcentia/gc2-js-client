@@ -425,27 +425,25 @@ const http = createCentiaClient({
   auth: { getAccessToken: async () => token },
 })
 
-// Token-authenticated WFS
+// WFS — all requests target the database-qualified endpoint
 const wfs = new Wfs(http)
-const capabilities = await wfs.getWfs('my_schema', { REQUEST: 'GetCapabilities' })
+const capabilities = await wfs.getWfs('my_schema', 'my_database', { REQUEST: 'GetCapabilities' })
 const gml = await wfs.getWfs(
   'my_schema',
+  'my_database',
   { REQUEST: 'GetFeature', TYPENAME: 'my_table', MAXFEATURES: 100 },
   { srs: 25832 }, // optional output SRID (and optional timeSlice for versioned layers)
 )
 
 // WFS-T transactions are posted as XML
-await wfs.postWfs('my_schema', '<wfs:Transaction>…</wfs:Transaction>')
+await wfs.postWfs('my_schema', 'my_database', '<wfs:Transaction>…</wfs:Transaction>')
 
 // Generic OWS (WMS/WFS/UTFGRID)
 const ows = new Ows(http)
-const wmsCaps = await ows.getOws('my_schema', { SERVICE: 'WMS', REQUEST: 'GetCapabilities' })
-
-// Anonymous / HTTP-Basic access uses the ...NoToken variants with the database in the path
-const anonCaps = await wfs.getWfsNoToken('my_schema', 'my_database', { REQUEST: 'GetCapabilities' })
+const wmsCaps = await ows.getOws('my_schema', 'my_database', { SERVICE: 'WMS', REQUEST: 'GetCapabilities' })
 ```
 
-Responses are returned as XML text (or parsed JSON for JSON formats such as UTFGRID). Binary responses like WMS `GetMap` images are not supported by these wrappers.
+One endpoint serves all identities: Bearer token (must match the `database` in the path), HTTP Basic and anonymous. Protected layers challenge token-less requests with HTTP Basic auth. Responses are returned as XML text (or parsed JSON for JSON formats such as UTFGRID). Binary responses like WMS `GetMap` images are not supported by these wrappers.
 
 ### MapCache (tiles: WMTS / TMS / WMS / Google Maps)
 

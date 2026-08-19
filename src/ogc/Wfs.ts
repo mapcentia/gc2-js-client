@@ -45,7 +45,7 @@ function wfsPath(base: string, options?: WfsPathOptions): string {
   if (options?.srs != null) {
     path += `/srs/${encodeURIComponent(options.srs)}`;
     if (options.timeSlice != null) {
-      path += `/${encodeURIComponent(options.timeSlice)}`;
+      path += `/ts/${encodeURIComponent(options.timeSlice)}`;
     }
   }
   return path;
@@ -65,60 +65,42 @@ function toQuery(params: WfsGetParams): Record<string, string> {
  * WFS endpoint wrapper (GetCapabilities, DescribeFeatureType, GetFeature and
  * WFS-T transactions).
  *
- * Token-authenticated clients use `getWfs`/`postWfs`; anonymous and HTTP-Basic
- * clients (e.g. QGIS) use the `...NoToken` variants, which include the
- * database in the path. Responses are returned as XML text.
+ * The endpoint accepts Bearer token, HTTP Basic and anonymous requests. A
+ * Bearer token must match the `database` in the path; protected layers
+ * challenge token-less requests with HTTP Basic auth, and transactions on a
+ * protected layer require credentials. Responses are returned as XML text.
  */
 export class Wfs {
   constructor(private readonly client: CentiaHttpClient) {}
 
-  /** Token-authenticated WFS GET. */
-  async getWfs(schema: string, params: WfsGetParams, options?: WfsPathOptions): Promise<string> {
-    return this.client.request<string>({
-      path: wfsPath(`api/v4/wfs/schema/${encodeURIComponent(schema)}`, options),
-      method: 'GET',
-      query: toQuery(params),
-      accept: 'text/xml',
-    });
+  private basePath(schema: string, database: string): string {
+    return `api/v4/wfs/schema/${encodeURIComponent(schema)}/database/${encodeURIComponent(database)}`;
   }
 
-  /** Token-authenticated WFS POST (XML-encoded GetFeature or Transaction). */
-  async postWfs(schema: string, xml: string, options?: WfsPathOptions): Promise<string> {
-    return this.client.request<string>({
-      path: wfsPath(`api/v4/wfs/schema/${encodeURIComponent(schema)}`, options),
-      method: 'POST',
-      body: xml,
-      contentType: 'text/xml',
-      accept: 'text/xml',
-    });
-  }
-
-  /** Anonymous/HTTP-Basic WFS GET. */
-  async getWfsNoToken(
+  /** WFS GET. */
+  async getWfs(
     schema: string,
     database: string,
     params: WfsGetParams,
     options?: WfsPathOptions,
   ): Promise<string> {
-    const base = `api/v4/wfs/schema/${encodeURIComponent(schema)}/database/${encodeURIComponent(database)}`;
     return this.client.request<string>({
-      path: wfsPath(base, options),
+      path: wfsPath(this.basePath(schema, database), options),
       method: 'GET',
       query: toQuery(params),
       accept: 'text/xml',
     });
   }
 
-  /** Anonymous/HTTP-Basic WFS POST (XML-encoded GetFeature or Transaction). */
-  async postWfsNoToken(
+  /** WFS POST (XML-encoded GetFeature or Transaction). */
+  async postWfs(
     schema: string,
     database: string,
     xml: string,
     options?: WfsPathOptions,
   ): Promise<string> {
-    const base = `api/v4/wfs/schema/${encodeURIComponent(schema)}/database/${encodeURIComponent(database)}`;
     return this.client.request<string>({
-      path: wfsPath(base, options),
+      path: wfsPath(this.basePath(schema, database), options),
       method: 'POST',
       body: xml,
       contentType: 'text/xml',

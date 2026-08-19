@@ -26,8 +26,9 @@ function toQuery(params?: OwsParams): Record<string, string> | undefined {
 /**
  * OWS (WMS/WFS/UTFGRID) endpoint wrapper.
  *
- * Token-authenticated clients use `getOws`/`postOws`; anonymous and HTTP-Basic
- * clients use the `...NoToken` variants, which include the database in the path.
+ * The endpoint accepts Bearer token, HTTP Basic and anonymous requests. A
+ * Bearer token must match the `database` in the path; protected layers
+ * challenge token-less requests with HTTP Basic auth.
  *
  * Responses are streamed from the backend and returned as text (XML) or, for
  * JSON responses such as UTFGRID, as parsed JSON. Binary responses (e.g. WMS
@@ -36,41 +37,24 @@ function toQuery(params?: OwsParams): Record<string, string> | undefined {
 export class Ows {
   constructor(private readonly client: CentiaHttpClient) {}
 
-  /** Token-authenticated OWS GET (WMS/WFS/UTFGRID). */
-  async getOws<T = string>(schema: string, params?: OwsParams): Promise<T> {
+  private basePath(schema: string, database: string): string {
+    return `api/v4/ows/schema/${encodeURIComponent(schema)}/database/${encodeURIComponent(database)}`;
+  }
+
+  /** OWS GET (WMS/WFS/UTFGRID). */
+  async getOws<T = string>(schema: string, database: string, params?: OwsParams): Promise<T> {
     return this.client.request<T>({
-      path: `api/v4/ows/schema/${encodeURIComponent(schema)}`,
+      path: this.basePath(schema, database),
       method: 'GET',
       query: toQuery(params),
       accept: '*/*',
     });
   }
 
-  /** Token-authenticated OWS POST (WFS XML). */
-  async postOws(schema: string, xml: string): Promise<string> {
+  /** OWS POST (WFS XML). */
+  async postOws(schema: string, database: string, xml: string): Promise<string> {
     return this.client.request<string>({
-      path: `api/v4/ows/schema/${encodeURIComponent(schema)}`,
-      method: 'POST',
-      body: xml,
-      contentType: 'text/xml',
-      accept: '*/*',
-    });
-  }
-
-  /** Anonymous/HTTP-Basic OWS GET (WMS/WFS/UTFGRID). */
-  async getOwsNoToken<T = string>(schema: string, database: string, params?: OwsParams): Promise<T> {
-    return this.client.request<T>({
-      path: `api/v4/ows/schema/${encodeURIComponent(schema)}/database/${encodeURIComponent(database)}`,
-      method: 'GET',
-      query: toQuery(params),
-      accept: '*/*',
-    });
-  }
-
-  /** Anonymous/HTTP-Basic OWS POST (WFS XML). */
-  async postOwsNoToken(schema: string, database: string, xml: string): Promise<string> {
-    return this.client.request<string>({
-      path: `api/v4/ows/schema/${encodeURIComponent(schema)}/database/${encodeURIComponent(database)}`,
+      path: this.basePath(schema, database),
       method: 'POST',
       body: xml,
       contentType: 'text/xml',
