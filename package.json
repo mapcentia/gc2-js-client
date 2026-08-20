@@ -1,6 +1,6 @@
 {
   "name": "@centia-io/sdk",
-  "version": "0.2.9",
+  "version": "0.2.10",
   "description": "Centia-io TypeScript SDK",
   "author": "Martin Høgh",
   "license": "MIT",
@@ -14,8 +14,14 @@
       "import": "./dist/centia-io-sdk.js"
     },
     "./node": {
-      "import": { "types": "./dist/centia-io-sdk-node.d.ts", "default": "./dist/centia-io-sdk-node.js" },
-      "require": { "types": "./dist/centia-io-sdk-node.d.cts", "default": "./dist/centia-io-sdk-node.cjs" }
+      "import": {
+        "types": "./dist/centia-io-sdk-node.d.ts",
+        "default": "./dist/centia-io-sdk-node.js"
+      },
+      "require": {
+        "types": "./dist/centia-io-sdk-node.d.cts",
+        "default": "./dist/centia-io-sdk-node.cjs"
+      }
     },
     "./package.json": "./package.json"
   },
