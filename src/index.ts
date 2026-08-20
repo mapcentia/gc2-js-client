@@ -27,6 +27,7 @@ import { createCentiaAdminClient } from "./admin"
 import { Ows } from "./ogc/Ows"
 import { Wfs } from "./ogc/Wfs"
 import { Mapcache } from "./ogc/Mapcache"
+import { Keyvalue } from "./keyvalue/Keyvalue"
 import type {RpcRequest, RpcResponse, GqlRequest, GqlResponse, SqlRequest, SqlResponse} from "./types/pgTypes"
 import type * as PgTypes from "./types/pgTypes"
 import type {Options, CodeFlowOptions, PasswordFlowOptions} from "./util/utils"
@@ -54,6 +55,7 @@ export {
     Ows,
     Wfs,
     Mapcache,
+    Keyvalue,
     CentiaApiError,
     isCentiaApiError,
 }
@@ -156,6 +158,7 @@ export type {
 export type { OwsParams } from "./ogc/Ows";
 export type { WfsGetParams, WfsPathOptions } from "./ogc/Wfs";
 export type { MapcacheParams, DeleteMapcacheTilesetOptions, MapcacheTilesetDeleteResult } from "./ogc/Mapcache";
+export type { KeyvalueEntry, CreateKeyvalueRequest, PatchKeyvalueRequest, KeyvalueProjection } from "./keyvalue/Keyvalue";
 export type { SqlNoTokenRequest } from "./SqlNoToken";
 export type { DBSchema, TableDef, ColumnDef, RowForTable, PickRow, RowOfSelect, RowsOfSelect, RowOfRequest, RowsOfRequest } from "./SqlBuilder";
 export type { RowOfApiCall, RowsOfApiCall, RowOfApiMethod, RowsOfApiMethod, ParamsOfApiMethod } from "./Api";

@@ -474,6 +474,38 @@ const job = await mapcache.deleteMapcacheTileset('my_database', 'my_schema.roads
 
 The endpoint accepts anonymous, HTTP Basic and Bearer token requests; tile requests are authorized against the tileset's layer. Authorization travels in the `Authorization` header — it cannot be embedded in the URL — so for protected tilesets, inject the header per tile request via the map library's request hook (e.g. MapLibre's `transformRequest` or OpenLayers' `tileLoadFunction`).
 
+## Key/value store
+
+`Keyvalue` wraps the `/api/v4/keyvalue` endpoints for storing arbitrary JSON under globally unique keys. It takes a `CentiaHttpClient` and requires a Bearer token:
+
+```ts
+import { createCentiaClient, Keyvalue } from '@centia-io/sdk'
+
+const kv = new Keyvalue(http)
+
+// Create (201; 409 if the key already exists)
+await kv.postKeyvalue('app_settings', { value: { theme: 'dark', user: { name: 'Alice' } }, public: false })
+
+// Read one key — value is returned decoded, and can be typed
+const entry = await kv.getKeyvalue<{ theme: string }>('app_settings')
+// { id: 1, key: 'app_settings', value: { theme: 'dark', ... }, owner: 'alice', public: false }
+
+// List all keys visible to the caller
+const entries = await kv.getKeyvalue()
+
+// Project only named JSON sub-trees of the value (dot notation, result keyed by path)
+const { value } = await kv.getKeyvalue('app_settings', ['user.name', 'theme'])
+// { 'user.name': 'Alice', theme: 'dark' }
+
+// Partial update of value and/or public flag (303)
+await kv.patchKeyvalue('app_settings', { public: true })
+
+// Delete (204)
+await kv.deleteKeyvalue('app_settings')
+```
+
+Access model: super users have full CRUD on all keys; sub-users can read their own keys plus all `public` keys, and can only create/update/delete their own. `owner` is always set server-side from the token and cannot be sent in the body; legacy keys without an owner are treated as public and super-owned.
+
 ## Error handling
 
 - Network/HTTP errors: thrown as `Error` with the status/body text when available.
