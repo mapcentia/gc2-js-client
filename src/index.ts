@@ -28,6 +28,7 @@ import { Ows } from "./ogc/Ows"
 import { Wfs } from "./ogc/Wfs"
 import { Mapcache } from "./ogc/Mapcache"
 import { Keyvalue } from "./keyvalue/Keyvalue"
+import { Features } from "./features/Features"
 import type {RpcRequest, RpcResponse, GqlRequest, GqlResponse, SqlRequest, SqlResponse} from "./types/pgTypes"
 import type * as PgTypes from "./types/pgTypes"
 import type {Options, CodeFlowOptions, PasswordFlowOptions} from "./util/utils"
@@ -56,6 +57,7 @@ export {
     Wfs,
     Mapcache,
     Keyvalue,
+    Features,
     CentiaApiError,
     isCentiaApiError,
 }
@@ -159,6 +161,7 @@ export type { OwsParams } from "./ogc/Ows";
 export type { WfsGetParams, WfsPathOptions } from "./ogc/Wfs";
 export type { MapcacheParams, DeleteMapcacheTilesetOptions, MapcacheTilesetDeleteResult } from "./ogc/Mapcache";
 export type { KeyvalueEntry, CreateKeyvalueRequest, PatchKeyvalueRequest, KeyvalueProjection } from "./keyvalue/Keyvalue";
+export type { GeoJsonGeometry, GeoJsonFeature, GeoJsonFeatureCollection, FeatureKey, FeatureSrsOptions, PatchFeatureOptions } from "./features/Features";
 export type { SqlNoTokenRequest } from "./SqlNoToken";
 export type { DBSchema, TableDef, ColumnDef, RowForTable, PickRow, RowOfSelect, RowsOfSelect, RowOfRequest, RowsOfRequest } from "./SqlBuilder";
 export type { RowOfApiCall, RowsOfApiCall, RowOfApiMethod, RowsOfApiMethod, ParamsOfApiMethod } from "./Api";

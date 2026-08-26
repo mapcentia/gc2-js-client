@@ -506,6 +506,44 @@ await kv.deleteKeyvalue('app_settings')
 
 Access model: super users have full CRUD on all keys; sub-users can read their own keys plus all `public` keys, and can only create/update/delete their own. `owner` is always set server-side from the token and cannot be sent in the body; legacy keys without an owner are treated as public and super-owned.
 
+## Feature API (GeoJSON)
+
+`Features` wraps the `/api/v4/schemas/{schema}/tables/{table}/features` endpoints for reading and writing table rows as GeoJSON through WFS-T transactions. It takes a `CentiaHttpClient` and requires a Bearer token:
+
+```ts
+import { createCentiaClient, Features } from '@centia-io/sdk'
+
+const features = new Features(http)
+
+// Get by primary key — one match returns a bare Feature, several a FeatureCollection
+const one = await features.getFeature('my_schema', 'my_table', 1)
+const many = await features.getFeature('my_schema', 'my_table', [1, 2, 3])
+
+// Reproject the output geometry (default is EPSG:4326, lon/lat)
+const projected = await features.getFeature('my_schema', 'my_table', 1, { srs: 25832 })
+
+// Insert from a Feature or FeatureCollection (201; Location points at the new feature(s)).
+// A primary-key value in properties is used as the new key; otherwise one is generated.
+const { location } = await features.postFeature('my_schema', 'my_table', {
+  type: 'Feature',
+  geometry: { type: 'Point', coordinates: [10.0, 55.0] },
+  properties: { name: 'New point' },
+})
+
+// Update (303). Address a single feature by path key, or omit it and let each
+// feature carry its primary-key value in properties.
+await features.patchFeature('my_schema', 'my_table', {
+  type: 'Feature',
+  geometry: { type: 'Point', coordinates: [10.1, 55.1] },
+  properties: { name: 'Moved point' },
+}, { feature: 1 })
+
+// Delete a single feature (204)
+await features.deleteFeature('my_schema', 'my_table', 1)
+```
+
+`srs` on `postFeature`/`patchFeature` declares the SRID of the *incoming* geometry. Reading requires a key — use the SQL or WFS APIs to query whole collections. PUT is not supported.
+
 ## Error handling
 
 - Network/HTTP errors: thrown as `Error` with the status/body text when available.
