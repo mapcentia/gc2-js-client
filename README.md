@@ -538,8 +538,9 @@ await features.patchFeature('my_schema', 'my_table', {
   properties: { name: 'Moved point' },
 }, { feature: 1 })
 
-// Delete a single feature (204)
+// Delete one or more features (204; 404 only when no key matches)
 await features.deleteFeature('my_schema', 'my_table', 1)
+await features.deleteFeature('my_schema', 'my_table', [1, 2, 3])
 ```
 
 `srs` on `postFeature`/`patchFeature` declares the SRID of the *incoming* geometry. Reading requires a key — use the SQL or WFS APIs to query whole collections. PUT is not supported.

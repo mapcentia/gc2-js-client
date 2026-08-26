@@ -131,4 +131,15 @@ describe('Features', () => {
     expect(url).toBe('https://api.example.com/api/v4/schemas/my_schema/tables/my_table/features/1');
     expect(init.method).toBe('DELETE');
   });
+
+  it('deleteFeature joins multiple keys with commas', async () => {
+    const fetchFn = mockFetch(204, null);
+    const features = new Features(createHttp(fetchFn));
+
+    await features.deleteFeature('my_schema', 'my_table', [1, 2, 3]);
+
+    const [url, init] = lastCall(fetchFn);
+    expect(url).toBe('https://api.example.com/api/v4/schemas/my_schema/tables/my_table/features/1,2,3');
+    expect(init.method).toBe('DELETE');
+  });
 });

@@ -129,8 +129,12 @@ export class Features {
     return { location: res.getHeader('Location') ?? '' };
   }
 
-  /** Delete a single feature by primary key. */
-  async deleteFeature(schema: string, table: string, feature: string | number): Promise<void> {
+  /**
+   * Delete one or more features by primary key. Keys that match are deleted
+   * in one WFS-T transaction; a 404 `CentiaApiError` is thrown only when
+   * none of the keys match.
+   */
+  async deleteFeature(schema: string, table: string, feature: FeatureKey): Promise<void> {
     await this.client.request({
       path: featurePath(schema, table, feature),
       method: 'DELETE',
