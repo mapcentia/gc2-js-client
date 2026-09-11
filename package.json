@@ -1,6 +1,6 @@
 {
   "name": "@centia-io/sdk",
-  "version": "0.2.12",
+  "version": "0.2.13",
   "description": "Centia-io TypeScript SDK",
   "author": "Martin Høgh",
   "license": "MIT",
