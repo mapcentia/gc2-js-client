@@ -5,13 +5,13 @@
  *
  */
 
-import {CodeFlowOptions, GetDeviceCodeResponse, getNonce, GetTokenResponse, PasswordFlowOptions, SignUpOptions} from '../util/utils';
+import {CodeFlowOptions, GetDeviceCodeResponse, getNonce, GetTokenResponse, GuestFlowOptions, PasswordFlowOptions, SignUpOptions} from '../util/utils';
 
 export class Gc2Service {
-    private readonly options: CodeFlowOptions | PasswordFlowOptions;
+    private readonly options: CodeFlowOptions | PasswordFlowOptions | GuestFlowOptions;
     private readonly host: string;
 
-    constructor(options: CodeFlowOptions | PasswordFlowOptions | SignUpOptions) {
+    constructor(options: CodeFlowOptions | PasswordFlowOptions | SignUpOptions | GuestFlowOptions) {
         this.options = options;
         this.host = options.host;
     }
@@ -25,6 +25,9 @@ export class Gc2Service {
     }
     private isSignUpOptions(options: CodeFlowOptions | PasswordFlowOptions| SignUpOptions): options is SignUpOptions {
         return 'parentDb' in options;
+    }
+    private isGuestFlowOptions(options: CodeFlowOptions | PasswordFlowOptions | SignUpOptions | GuestFlowOptions): options is GuestFlowOptions {
+        return 'database' in options && !('username' in options);
     }
 
     private buildUrl(path: string): string {
@@ -190,6 +193,25 @@ export class Gc2Service {
                 username,
                 password,
                 database,
+            }
+        );
+    }
+
+    async getGuestToken(): Promise<GetTokenResponse> {
+        let database
+        if (this.isGuestFlowOptions(this.options)) {
+            database = this.options.database
+        } else {
+            throw new Error('GuestFlow options required for this operation')
+        }
+        const path = `${this.host}/api/v4/oauth/guest`;
+        return this.request(
+            this.buildUrl(path),
+            'POST',
+            {
+                database,
+                client_id: this.options.clientId,
+                client_secret: this.options.clientSecret,
             }
         );
     }

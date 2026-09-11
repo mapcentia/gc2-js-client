@@ -115,6 +115,33 @@ await flow.signIn();
 flow.signOut(); // Clears tokens/options in local storage (no redirect)
 ```
 
+### GuestFlow (Guest tokens – anonymous access)
+
+Obtain tokens for a database's default user (the sub-user used for anonymous access) without any user credentials. Useful for public apps that need a bearer token for public data. Requires that the database has a default user; `clientSecret` is only needed when the OAuth client is not public.
+
+Required options:
+- `host`
+- `clientId`
+- `database`
+- `clientSecret` (only for confidential clients)
+
+Example:
+```ts
+import { GuestFlow } from "@centia-io/sdk";
+
+const flow = new GuestFlow({
+  host: "https://api.centia.io",
+  clientId: "your-client-id",
+  database: "your-database"
+});
+
+await flow.signIn();
+// Tokens for the default user are now stored; subsequent Sql/Rpc calls
+// include the Authorization header and refresh works as usual.
+
+flow.signOut(); // Clears tokens/options in local storage (no redirect)
+```
+
 ### SignUp (Browser – Create a new user)
 
 Use this helper in browser applications to redirect the user to the Centia‑io sign‑up page. 

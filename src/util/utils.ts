@@ -37,6 +37,10 @@ export type PasswordFlowOptions = Options & {
     database: string
 }
 
+export type GuestFlowOptions = Options & {
+    database: string
+}
+
 export type SignUpOptions = Options & {
     host: string
     clientId: string

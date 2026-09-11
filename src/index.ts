@@ -7,6 +7,7 @@
 
 import CodeFlow from "./CodeFlow"
 import PasswordFlow from "./PasswordFlow"
+import GuestFlow from "./GuestFlow"
 import Sql from "./Sql"
 import SqlNoToken from "./SqlNoToken"
 import Rpc from "./Rpc"
@@ -32,12 +33,13 @@ import { Keyvalue } from "./keyvalue/Keyvalue"
 import { Features } from "./features/Features"
 import type {RpcRequest, RpcResponse, GqlRequest, GqlResponse, SqlRequest, SqlResponse} from "./types/pgTypes"
 import type * as PgTypes from "./types/pgTypes"
-import type {Options, CodeFlowOptions, PasswordFlowOptions} from "./util/utils"
+import type {Options, CodeFlowOptions, PasswordFlowOptions, GuestFlowOptions} from "./util/utils"
 import type {WsOptions, WsMessage, BatchMessage, SubscriptionAckMessage, WsErrorMessage, SubscriptionRequest, TableBatch} from "./Ws"
 
 export {
     CodeFlow,
     PasswordFlow,
+    GuestFlow,
     Sql,
     SqlNoToken,
     Rpc,
@@ -74,6 +76,7 @@ export type {
     Options,
     CodeFlowOptions,
     PasswordFlowOptions,
+    GuestFlowOptions,
     WsOptions,
     WsMessage,
     BatchMessage,
