@@ -244,7 +244,8 @@ export interface CreateClientRequest {
   name: string;
   id?: string;
   description?: string | null;
-  redirect_uri?: string[];
+  /** Redirect URIs; null clears the list. */
+  redirect_uri?: string[] | null;
   homepage?: string;
   public?: boolean;
   confirm?: boolean;
@@ -256,7 +257,8 @@ export interface CreateClientRequest {
 export interface PatchClientRequest {
   name?: string;
   description?: string | null;
-  redirect_uri?: string[];
+  /** Redirect URIs; null clears the list. */
+  redirect_uri?: string[] | null;
   homepage?: string;
   public?: boolean;
   confirm?: boolean;
