@@ -221,7 +221,8 @@ export interface CreateUserRequest {
 
 export interface PatchUserRequest {
   email: string;
-  password: string | null;
+  /** Omit to leave the password unchanged; sending a value sets it. */
+  password?: string;
   default_user?: boolean;
   properties?: unknown;
   /** Group memberships (group screen names); null clears membership. */

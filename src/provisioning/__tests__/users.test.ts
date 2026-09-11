@@ -125,19 +125,18 @@ describe('ProvisioningUsers', () => {
     expect(result.location).toBe('/api/v4/users/alice');
   });
 
-  it('patchUser with null password sends null', async () => {
+  it('patchUser without password omits the property (leave unchanged)', async () => {
     const fetchFn = mockFetch(303, null, { location: '/api/v4/users/alice' });
     const client = createClient(fetchFn);
 
     await client.provisioning.users.patchUser('alice', {
       email: 'alice@example.com',
-      password: null,
       default_user: true,
     });
 
     const [, init] = lastCall(fetchFn);
     const body = JSON.parse(init.body as string);
-    expect(body.password).toBeNull();
+    expect('password' in body).toBe(false);
   });
 
   it('deleteUser sends DELETE 204', async () => {
