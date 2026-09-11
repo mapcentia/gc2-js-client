@@ -474,6 +474,36 @@ const job = await mapcache.deleteMapcacheTileset('my_database', 'my_schema.roads
 
 The endpoint accepts anonymous, HTTP Basic and Bearer token requests; tile requests are authorized against the tileset's layer. Authorization travels in the `Authorization` header — it cannot be embedded in the URL — so for protected tilesets, inject the header per tile request via the map library's request hook (e.g. MapLibre's `transformRequest` or OpenLayers' `tileLoadFunction`).
 
+## OGC API (Features / Maps)
+
+`Ogc` wraps the RESTful OGC API under `/api/v4/ogc/database/{database}` — OGC API Features (Part 1 Core, Part 2 CRS) for reading features as GeoJSON and OGC API Maps (Part 1 Core) for rendered images. Like `Ows`/`Wfs` it takes a `CentiaHttpClient`; Bearer token, HTTP Basic and anonymous requests are all accepted:
+
+```ts
+import { createCentiaClient, Ogc, OGC_CRS84, ogcEpsgCrs } from '@centia-io/sdk'
+
+const ogc = new Ogc(http)
+
+const { collections } = await ogc.getCollections('my_database')
+const collection = await ogc.getCollection('my_database', 'my_schema.roads') // extent, crs list, links
+
+// GeoJSON items — default page size is 10; follow the `next` link or pass offset
+const page = await ogc.getItems<{ gid: number; name: string }>('my_database', 'my_schema.roads', {
+  bbox: [9, 55, 10, 56],        // lon/lat in CRS84 (the default bbox-crs)
+  crs: ogcEpsgCrs(25832),       // output CRS from the collection's crs list
+  limit: 100,
+  datetime: '2024-01-01T00:00:00Z', // versioned layers: the version valid at that time
+})
+page.numberMatched // total; page.numberReturned; page.links (next/prev)
+
+const feature = await ogc.getItem('my_database', 'my_schema.roads', 42)
+
+// Map images are fetched by URL (e.g. an <img> or a map library)
+const url = ogc.mapUrl('my_database', 'my_schema.roads', { bbox: [9, 55, 10, 56], width: 512, format: 'png' })
+const multi = ogc.datasetMapUrl('my_database', ['my_schema.roads', 'my_schema.buildings'], { width: 512 })
+```
+
+CRS values are URIs: `OGC_CRS84` (lon/lat, default) or `ogcEpsgCrs(code)`; note `ogcEpsgCrs(4326)` is lat/lon order per OGC API Features Part 2. A collection that exists but is not readable answers `401` (anonymous) or `403` (no privilege); unknown collections and features are `404` — all thrown as `CentiaApiError`. Geofence rules, versioning and workflow are applied server-side.
+
 ## Key/value store
 
 `Keyvalue` wraps the `/api/v4/keyvalue` endpoints for storing arbitrary JSON under globally unique keys. It takes a `CentiaHttpClient` and requires a Bearer token:

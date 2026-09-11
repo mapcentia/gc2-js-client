@@ -27,6 +27,7 @@ import { createCentiaAdminClient } from "./admin"
 import { Ows } from "./ogc/Ows"
 import { Wfs } from "./ogc/Wfs"
 import { Mapcache } from "./ogc/Mapcache"
+import { Ogc } from "./ogc/Ogc"
 import { Keyvalue } from "./keyvalue/Keyvalue"
 import { Features } from "./features/Features"
 import type {RpcRequest, RpcResponse, GqlRequest, GqlResponse, SqlRequest, SqlResponse} from "./types/pgTypes"
@@ -56,6 +57,7 @@ export {
     Ows,
     Wfs,
     Mapcache,
+    Ogc,
     Keyvalue,
     Features,
     CentiaApiError,
@@ -160,6 +162,8 @@ export type {
 export type { OwsParams } from "./ogc/Ows";
 export type { WfsGetParams, WfsPathOptions } from "./ogc/Wfs";
 export type { MapcacheParams, DeleteMapcacheTilesetOptions, MapcacheTilesetDeleteResult } from "./ogc/Mapcache";
+export { OGC_CRS84, ogcEpsgCrs } from "./ogc/Ogc";
+export type { OgcLink, OgcLandingPage, OgcConformance, OgcExtent, OgcCollection, OgcCollections, OgcFeature, OgcFeatureCollection, OgcCollectionsOptions, OgcBbox, OgcSpatialOptions, OgcItemsOptions, OgcItemOptions, OgcMapOptions } from "./ogc/Ogc";
 export type { KeyvalueEntry, CreateKeyvalueRequest, PatchKeyvalueRequest, KeyvalueProjection } from "./keyvalue/Keyvalue";
 export type { GeoJsonGeometry, GeoJsonFeature, GeoJsonFeatureCollection, FeatureKey, FeatureSrsOptions, PatchFeatureOptions } from "./features/Features";
 export type { SqlNoTokenRequest } from "./SqlNoToken";
