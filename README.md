@@ -602,6 +602,40 @@ await features.deleteFeature('my_schema', 'my_table', [1, 2, 3])
 
 `srs` on `postFeature`/`patchFeature` declares the SRID of the *incoming* geometry. Reading requires a key — use the SQL or WFS APIs to query whole collections. PUT is not supported.
 
+## Snapshots (GeoParquet exports)
+
+`Snapshots` wraps the snapshot API: asynchronous GeoParquet exports of a table or view to S3, and read access to the published snapshot files. It takes a `CentiaHttpClient` and requires a Bearer token:
+
+```ts
+import { createCentiaClient, Snapshots } from '@centia-io/sdk'
+
+const snapshots = new Snapshots(http)
+
+// Queue an export (202; super-user only). The export runs asynchronously.
+const { id } = await snapshots.postSnapshot({ schema: 'geodanmark', relation: 'bygning', srs: 25832 })
+
+// Poll until it finishes (succeeded/failed/superseded) — or use getSnapshot(id) yourself
+const job = await snapshots.waitForSnapshot(id, { intervalMs: 2000, timeoutMs: 300_000 })
+if (job.status === 'failed') throw new Error(job.error ?? 'export failed')
+
+// List jobs, optionally filtered (super-user only)
+const jobs = await snapshots.getSnapshots({ schema: 'geodanmark', relation: 'bygning' })
+
+// Read API — any user with read access to the relation:
+const published = await snapshots.getRelationSnapshots('geodanmark', 'bygning') // newest first
+const meta = await snapshots.getRelationSnapshot('geodanmark', 'bygning', '2026-09-16')
+
+// The Parquet file itself. dataUrl for DuckDB/GDAL/plain fetch; the data
+// methods return the raw Response (stream or buffer it yourself) and follow
+// the 302 redirect to presigned storage URLs.
+const url = snapshots.getRelationSnapshotDataUrl('geodanmark', 'bygning', '2026-09-16')
+const head = await snapshots.headRelationSnapshotData('geodanmark', 'bygning', '2026-09-16') // Content-Length/ETag
+const part = await snapshots.getRelationSnapshotData('geodanmark', 'bygning', '2026-09-16', { range: [0, 1023] })
+const file = await snapshots.getRelationSnapshotFile('geodanmark', 'bygning', '2026-09-16', 'metadata-<id>.json')
+```
+
+The job API is super-user only (403 `SUPER_USER_ONLY`); creating throws 404 (relation not found), 409 (a snapshot of the relation is already pending or running) or 501 (snapshot storage not configured). The read API needs read access to the relation — sub-users with a deny/limit geofence rule get 403 `GEOFENCE_RULES_APPLY`. A snapshot with several data files answers 409 `MULTI_FILE_SNAPSHOT` on `/data`; list `files` in the metadata and fetch them with `getRelationSnapshotFile`.
+
 ## Error handling
 
 - Network/HTTP errors: thrown as `Error` with the status/body text when available.

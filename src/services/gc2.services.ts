@@ -17,13 +17,13 @@ export class Gc2Service {
     }
 
     // Type guards to check if options is CodeFlowOptions or PasswordFlowOptions
-    private isCodeFlowOptions(options: CodeFlowOptions | PasswordFlowOptions | SignUpOptions): options is CodeFlowOptions {
+    private isCodeFlowOptions(options: CodeFlowOptions | PasswordFlowOptions | SignUpOptions | GuestFlowOptions): options is CodeFlowOptions {
         return 'redirectUri' in options;
     }
-    private isPasswordFlowOptions(options: CodeFlowOptions | PasswordFlowOptions| SignUpOptions): options is PasswordFlowOptions {
+    private isPasswordFlowOptions(options: CodeFlowOptions | PasswordFlowOptions | SignUpOptions | GuestFlowOptions): options is PasswordFlowOptions {
         return 'username' in options;
     }
-    private isSignUpOptions(options: CodeFlowOptions | PasswordFlowOptions| SignUpOptions): options is SignUpOptions {
+    private isSignUpOptions(options: CodeFlowOptions | PasswordFlowOptions | SignUpOptions | GuestFlowOptions): options is SignUpOptions {
         return 'parentDb' in options;
     }
     private isGuestFlowOptions(options: CodeFlowOptions | PasswordFlowOptions | SignUpOptions | GuestFlowOptions): options is GuestFlowOptions {

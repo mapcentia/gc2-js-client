@@ -4,7 +4,7 @@
  * @license    https://opensource.org/license/mit  The MIT License
  */
 
-import type { CentiaClientConfig, CentiaAuth, RequestOptions, FullResponse } from './types';
+import type { CentiaClientConfig, CentiaAuth, RequestOptions, RawRequestOptions, FullResponse } from './types';
 import { CentiaApiError } from './errors';
 
 /**
@@ -77,6 +77,67 @@ export class CentiaHttpClient {
       status: response.status,
       getHeader: (name: string) => response.headers.get(name),
     };
+  }
+
+  /**
+   * Execute a request and return the raw Response without consuming the body.
+   * For binary endpoints (file downloads): follows redirects (a presigned
+   * storage URL — the fetch spec strips Authorization on cross-origin
+   * redirects), sends no Content-Type, and supports extra request headers
+   * such as Range. Throws CentiaApiError on a status not in expectedStatus.
+   */
+  async requestRaw(opts: RawRequestOptions): Promise<Response> {
+    const url = this.buildUrl(opts.path, opts.query);
+    const headers: Record<string, string> = {
+      'Accept': opts.accept ?? '*/*',
+    };
+    if (this.auth.getAccessToken) {
+      const token = await this.auth.getAccessToken();
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+    }
+    if (this.auth.getHeaders) {
+      Object.assign(headers, await this.auth.getHeaders());
+    }
+    if (this.userAgent && typeof navigator === 'undefined') {
+      headers['User-Agent'] = this.userAgent;
+    }
+    Object.assign(headers, opts.headers);
+
+    const response = await this.fetchFn(url, {
+      method: opts.method,
+      headers,
+      redirect: 'follow',
+    });
+
+    const expected = opts.expectedStatus ?? [200];
+    if (!expected.includes(response.status)) {
+      let bodyText = '';
+      try {
+        bodyText = await response.text();
+      } catch {
+        // Body read errors are handled below
+      }
+      let parsed: any = null;
+      if (bodyText) {
+        try {
+          parsed = JSON.parse(bodyText);
+        } catch {
+          // Not JSON — keep parsed as null
+        }
+      }
+      throw new CentiaApiError({
+        message: (parsed?.message ?? parsed?.error ?? bodyText) || `Unexpected status ${response.status}`,
+        status: response.status,
+        code: parsed?.code,
+        details: parsed,
+        requestId: response.headers.get('x-request-id') ?? undefined,
+        method: opts.method,
+        url,
+      });
+    }
+    return response;
   }
 
   private buildUrl(path: string, query?: Record<string, string>): string {

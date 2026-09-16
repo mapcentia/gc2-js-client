@@ -31,6 +31,7 @@ import { Mapcache } from "./ogc/Mapcache"
 import { Ogc } from "./ogc/Ogc"
 import { Keyvalue } from "./keyvalue/Keyvalue"
 import { Features } from "./features/Features"
+import { Snapshots } from "./snapshots/Snapshots"
 import type {RpcRequest, RpcResponse, GqlRequest, GqlResponse, SqlRequest, SqlResponse} from "./types/pgTypes"
 import type * as PgTypes from "./types/pgTypes"
 import type {Options, CodeFlowOptions, PasswordFlowOptions, GuestFlowOptions} from "./util/utils"
@@ -62,6 +63,7 @@ export {
     Ogc,
     Keyvalue,
     Features,
+    Snapshots,
     CentiaApiError,
     isCentiaApiError,
 }
@@ -87,7 +89,7 @@ export type {
     PgTypes,
 }
 
-export type { CentiaClientConfig, CentiaAuth, RequestOptions, FullResponse } from "./http/types";
+export type { CentiaClientConfig, CentiaAuth, RequestOptions, RawRequestOptions, FullResponse } from "./http/types";
 export type { CentiaApiErrorOptions } from "./http/errors";
 export type { CentiaHttpClient } from "./http/client";
 export type { CentiaAdminClient } from "./admin";
@@ -169,6 +171,7 @@ export { OGC_CRS84, ogcEpsgCrs } from "./ogc/Ogc";
 export type { OgcLink, OgcLandingPage, OgcConformance, OgcExtent, OgcCollection, OgcCollections, OgcFeature, OgcFeatureCollection, OgcCollectionsOptions, OgcBbox, OgcSpatialOptions, OgcItemsOptions, OgcItemOptions, OgcMapOptions } from "./ogc/Ogc";
 export type { KeyvalueEntry, CreateKeyvalueRequest, PatchKeyvalueRequest, KeyvalueProjection } from "./keyvalue/Keyvalue";
 export type { GeoJsonGeometry, GeoJsonFeature, GeoJsonFeatureCollection, FeatureKey, FeatureSrsOptions, PatchFeatureOptions } from "./features/Features";
+export type { SnapshotStatus, SnapshotRequest, SnapshotAccepted, SnapshotColumn, SnapshotJob, RelationSnapshotFile, RelationSnapshot, RelationSnapshotDetails, GetSnapshotsOptions, WaitForSnapshotOptions, SnapshotDataOptions } from "./snapshots/Snapshots";
 export type { SqlNoTokenRequest } from "./SqlNoToken";
 export type { DBSchema, TableDef, ColumnDef, RowForTable, PickRow, RowOfSelect, RowsOfSelect, RowOfRequest, RowsOfRequest } from "./SqlBuilder";
 export type { RowOfApiCall, RowsOfApiCall, RowOfApiMethod, RowsOfApiMethod, ParamsOfApiMethod } from "./Api";

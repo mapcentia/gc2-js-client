@@ -45,6 +45,22 @@ export interface RequestOptions {
   expectedStatus?: number;
 }
 
+/** Options for a raw request via CentiaHttpClient.requestRaw(). */
+export interface RawRequestOptions {
+  /** URL path relative to baseUrl. Leading slash is stripped. */
+  path: string;
+  /** HTTP method. */
+  method: 'GET' | 'HEAD';
+  /** Query parameters appended to the URL. */
+  query?: Record<string, string>;
+  /** Accept header. Defaults to the wildcard media type. */
+  accept?: string;
+  /** Extra request headers, e.g. Range. */
+  headers?: Record<string, string>;
+  /** Accepted HTTP status codes. Defaults to [200]. Non-match throws CentiaApiError. */
+  expectedStatus?: number[];
+}
+
 /** Full HTTP response with metadata, returned by CentiaHttpClient.requestFull(). */
 export interface FullResponse<T> {
   /** Parsed response body (null for empty responses like 204). */
