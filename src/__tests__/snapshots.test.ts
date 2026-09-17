@@ -60,6 +60,35 @@ describe('Snapshots job API', () => {
     expect(result).toEqual(job);
   });
 
+  it('postSnapshot accepts an array and returns the accepted jobs in order', async () => {
+    const accepted = [
+      { id: 'a1', status: 'pending', _links: { self: '/api/v4/snapshots/a1' } },
+      { id: 'b2', status: 'pending', _links: { self: '/api/v4/snapshots/b2' } },
+    ];
+    const fetchFn = mockFetch(202, accepted);
+    const snapshots = new Snapshots(createHttp(fetchFn));
+
+    const result = await snapshots.postSnapshot([
+      { schema: 'geodanmark', relation: 'bygning' },
+      { schema: 'geodanmark', relation: 'vej' },
+    ]);
+
+    const [, init] = lastCall(fetchFn);
+    expect(JSON.parse(init.body as string)).toHaveLength(2);
+    expect(result).toEqual(accepted);
+  });
+
+  it('getSnapshot joins multiple ids with commas and returns an array', async () => {
+    const fetchFn = mockFetch(200, [job, { ...job, id: 'c3d4' }]);
+    const snapshots = new Snapshots(createHttp(fetchFn));
+
+    const result = await snapshots.getSnapshot(['a1b2', 'c3d4']);
+
+    const [url] = lastCall(fetchFn);
+    expect(url).toBe('https://api.example.com/api/v4/snapshots/a1b2,c3d4');
+    expect(result).toHaveLength(2);
+  });
+
   it('getSnapshots sends schema and relation as query', async () => {
     const fetchFn = mockFetch(200, [job]);
     const snapshots = new Snapshots(createHttp(fetchFn));

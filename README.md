@@ -614,6 +614,14 @@ const snapshots = new Snapshots(http)
 // Queue an export (202; super-user only). The export runs asynchronously.
 const { id } = await snapshots.postSnapshot({ schema: 'geodanmark', relation: 'bygning', srs: 25832 })
 
+// Or queue several at once (all-or-nothing; accepted jobs come back in request order).
+// getSnapshot also accepts an array of ids.
+const accepted = await snapshots.postSnapshot([
+  { schema: 'geodanmark', relation: 'bygning' },
+  { schema: 'geodanmark', relation: 'vej' },
+])
+const both = await snapshots.getSnapshot(accepted.map((a) => a.id))
+
 // Poll until it finishes (succeeded/failed/superseded) — or use getSnapshot(id) yourself
 const job = await snapshots.waitForSnapshot(id, { intervalMs: 2000, timeoutMs: 300_000 })
 if (job.status === 'failed') throw new Error(job.error ?? 'export failed')
@@ -635,6 +643,46 @@ const file = await snapshots.getRelationSnapshotFile('geodanmark', 'bygning', '2
 ```
 
 The job API is super-user only (403 `SUPER_USER_ONLY`); creating throws 404 (relation not found), 409 (a snapshot of the relation is already pending or running) or 501 (snapshot storage not configured). The read API needs read access to the relation — sub-users with a deny/limit geofence rule get 403 `GEOFENCE_RULES_APPLY`. A snapshot with several data files answers 409 `MULTI_FILE_SNAPSHOT` on `/data`; list `files` in the metadata and fetch them with `getRelationSnapshotFile`.
+
+## Scheduler (recurring imports)
+
+`Scheduler` wraps the scheduler API: cron-scheduled data-import jobs and their runs. Super-user only. It takes a `CentiaHttpClient` and requires a Bearer token:
+
+```ts
+import { createCentiaClient, Scheduler } from '@centia-io/sdk'
+
+const scheduler = new Scheduler(http)
+
+// Create one or more jobs (201; arrays are all-or-nothing). The new ids are
+// parsed from the Location header, in request order.
+const { ids } = await scheduler.postSchedulerJob({
+  name: 'import buildings',
+  schema: 'geodanmark',
+  url: 'https://example.com/data.zip',
+  schedule: '0 3 * * *', // 5-field cron
+  epsg: 25832,           // defaults: epsg 4326, type "AUTO", encoding "UTF8",
+})                       // delete_append false, download_schema true, active true, snapshot false
+
+// Read jobs — a single id returns one job, an array returns an array
+const jobs = await scheduler.getSchedulerJobs()
+const job = await scheduler.getSchedulerJob(ids[0])
+const some = await scheduler.getSchedulerJob([5497, 5498])
+
+// Update / delete (delete is all-or-nothing; 409 if a run is in progress)
+await scheduler.patchSchedulerJob(ids[0], { active: false })
+await scheduler.deleteSchedulerJob([5497, 5498])
+
+// Runs. Starting is asynchronous (202) — poll getSchedulerRuns until it finishes.
+await scheduler.postSchedulerRun({ job: ids[0], force: true }) // force ignores delete_append and overwrites
+const runs = await scheduler.getSchedulerRuns({ job: ids[0], status: 'running' })
+const run = await scheduler.getSchedulerRun(runs[0].uuid)
+
+// Stop a running run: SIGINT, escalated to SIGKILL by the server after 30 s.
+// The request itself can take up to ~30 s — do not use a short timeout.
+const { signal } = await scheduler.deleteSchedulerRun(runs[0].uuid)
+```
+
+Errors throw `CentiaApiError` with status/code: 400 `INVALID_CRON_FIELD`/`INPUT_VALIDATION_ERROR`, 404 `JOB_NOT_FOUND`/`RUN_NOT_FOUND`, 409 `JOB_RUNNING`.
 
 ## Error handling
 

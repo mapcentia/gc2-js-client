@@ -124,12 +124,15 @@ export class Snapshots {
   }
 
   /**
-   * Queue a Parquet snapshot of a table or view. Returns 202 with the job id.
-   * Throws `CentiaApiError`: 403 (super-user only), 404 (relation not found),
-   * 409 (a snapshot of the relation is already pending or running),
-   * 501 (snapshot storage not configured).
+   * Queue Parquet snapshots of one or more tables or views (an array returns
+   * an array, in request order; all-or-nothing). Returns 202 with the job
+   * id(s). Throws `CentiaApiError`: 400 (duplicates or an empty list),
+   * 403 (super-user only), 404 (relation not found), 409 (a snapshot of a
+   * relation is already pending or running), 501 (storage not configured).
    */
-  async postSnapshot(body: SnapshotRequest): Promise<SnapshotAccepted> {
+  async postSnapshot(body: SnapshotRequest): Promise<SnapshotAccepted>;
+  async postSnapshot(body: SnapshotRequest[]): Promise<SnapshotAccepted[]>;
+  async postSnapshot(body: SnapshotRequest | SnapshotRequest[]): Promise<SnapshotAccepted | SnapshotAccepted[]> {
     return this.client.request({
       path: 'api/v4/snapshots',
       method: 'POST',
@@ -138,10 +141,16 @@ export class Snapshots {
     });
   }
 
-  /** Get a snapshot job by id. Super-user only. */
-  async getSnapshot(id: string): Promise<SnapshotJob> {
+  /**
+   * Get one snapshot job by id, or several (an array returns an array).
+   * Throws a 404 `CentiaApiError` when any id is unknown. Super-user only.
+   */
+  async getSnapshot(id: string): Promise<SnapshotJob>;
+  async getSnapshot(ids: string[]): Promise<SnapshotJob[]>;
+  async getSnapshot(id: string | string[]): Promise<SnapshotJob | SnapshotJob[]> {
+    const keys = Array.isArray(id) ? id : [id];
     return this.client.request({
-      path: `api/v4/snapshots/${encodeURIComponent(id)}`,
+      path: `api/v4/snapshots/${keys.map((k) => encodeURIComponent(k)).join(',')}`,
       method: 'GET',
     });
   }
