@@ -100,6 +100,29 @@ describe('Scheduler jobs', () => {
     expect(result.ids).toEqual([5497, 5498]);
   });
 
+  it('postSchedulerJob sends snapshot_formats', async () => {
+    const fetchFn = mockFetch(201, null, { location: '/api/v4/scheduler/jobs/5499' });
+    const scheduler = new Scheduler(createHttp(fetchFn));
+
+    await scheduler.postSchedulerJob({
+      name: 'a', schema: 's', url: 'u', schedule: '* * * * *',
+      snapshot: true, snapshot_formats: ['parquet', 'flatgeobuf'],
+    });
+
+    const [, init] = lastCall(fetchFn);
+    expect(JSON.parse(init.body as string).snapshot_formats).toEqual(['parquet', 'flatgeobuf']);
+  });
+
+  it('patchSchedulerJob can reset snapshot_formats with explicit null', async () => {
+    const fetchFn = mockFetch(303, null, { location: '/api/v4/scheduler/jobs/5497' });
+    const scheduler = new Scheduler(createHttp(fetchFn));
+
+    await scheduler.patchSchedulerJob(5497, { snapshot_formats: null });
+
+    const [, init] = lastCall(fetchFn);
+    expect(JSON.parse(init.body as string)).toEqual({ snapshot_formats: null });
+  });
+
   it('patchSchedulerJob sends PATCH 303 and returns location', async () => {
     const fetchFn = mockFetch(303, null, { location: '/api/v4/scheduler/jobs/5497' });
     const scheduler = new Scheduler(createHttp(fetchFn));

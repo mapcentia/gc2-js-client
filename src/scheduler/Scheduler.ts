@@ -6,6 +6,7 @@
 
 import type { CentiaHttpClient } from '../http/client';
 import type { LocationResponse } from '../provisioning/types';
+import type { SnapshotFormat } from '../snapshots/Snapshots';
 
 /** Status of a scheduler run. */
 export type SchedulerRunStatus = 'running' | 'succeeded' | 'failed' | 'skipped' | 'lost';
@@ -27,6 +28,13 @@ export interface SchedulerJobInput {
   postsql?: string | null;
   active?: boolean;
   snapshot?: boolean;
+  /**
+   * Formats of the snapshot queued after a successful import when
+   * `snapshot` is true. `null` (the default) means the server default;
+   * must otherwise be non-empty and free of duplicates. A PATCH with an
+   * explicit `null` resets to the default.
+   */
+  snapshot_formats?: SnapshotFormat[] | null;
 }
 
 /** Partial update of a scheduler job. */
@@ -50,6 +58,8 @@ export interface SchedulerJob {
   postsql: string | null;
   active: boolean;
   snapshot: boolean;
+  /** Formats of the snapshot queued after a successful import; null means the server default. */
+  snapshot_formats: SnapshotFormat[] | null;
   lastcheck: boolean | null;
   lasttimestamp: string | null;
   lastrun: string | null;

@@ -669,7 +669,10 @@ const { ids } = await scheduler.postSchedulerJob({
   url: 'https://example.com/data.zip',
   schedule: '0 3 * * *', // 5-field cron
   epsg: 25832,           // defaults: epsg 4326, type "AUTO", encoding "UTF8",
-})                       // delete_append false, download_schema true, active true, snapshot false
+                         // delete_append false, download_schema true, active true, snapshot false
+  snapshot: true,
+  snapshot_formats: ['parquet', 'flatgeobuf'], // formats of the post-import snapshot;
+})                                             // null/omitted = server default; PATCH null resets
 
 // Read jobs — a single id returns one job, an array returns an array
 const jobs = await scheduler.getSchedulerJobs()
