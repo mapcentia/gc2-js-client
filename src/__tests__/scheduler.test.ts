@@ -171,6 +171,15 @@ describe('Scheduler runs', () => {
     expect(result).toEqual(run);
   });
 
+  it('getSchedulerRun exposes the run log', async () => {
+    const fetchFn = mockFetch(200, { ...run, log: 'Info: started\nWarning: slow' });
+    const scheduler = new Scheduler(createHttp(fetchFn));
+
+    const result = await scheduler.getSchedulerRun('u-1');
+
+    expect(result.log).toBe('Info: started\nWarning: slow');
+  });
+
   it('postSchedulerRun starts a job run and expects 202', async () => {
     const accepted = { job: 5497, status: 'starting', _links: { runs: '/api/v4/scheduler/runs?job=5497' } };
     const fetchFn = mockFetch(202, accepted);

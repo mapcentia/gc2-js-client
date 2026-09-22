@@ -85,6 +85,13 @@ export interface SchedulerRun {
   heartbeat: string | null;
   finished_at: string | null;
   exit_reason: string | null;
+  /**
+   * The run's stdout (Info/Warning/Error lines), updated at every heartbeat
+   * while running and complete on finish. Capped at 1 MB with the tail kept
+   * (first line says so when truncated). Only present on getSchedulerRun —
+   * the getSchedulerRuns list omits it.
+   */
+  log?: string | null;
 }
 
 /** Body for starting a run. */
