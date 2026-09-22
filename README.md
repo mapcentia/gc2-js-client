@@ -612,7 +612,10 @@ import { createCentiaClient, Snapshots } from '@centia-io/sdk'
 const snapshots = new Snapshots(http)
 
 // Queue an export (202; super-user only). The export runs asynchronously.
-const { id } = await snapshots.postSnapshot({ schema: 'geodanmark', relation: 'bygning', srs: 25832 })
+// formats picks the output format(s) — 'parquet' (default) and/or 'flatgeobuf'.
+const { id } = await snapshots.postSnapshot({
+  schema: 'geodanmark', relation: 'bygning', srs: 25832, formats: ['parquet', 'flatgeobuf'],
+})
 
 // Or queue several at once (all-or-nothing; accepted jobs come back in request order).
 // getSnapshot also accepts an array of ids.
@@ -640,6 +643,11 @@ const url = snapshots.getRelationSnapshotDataUrl('geodanmark', 'bygning', '2026-
 const head = await snapshots.headRelationSnapshotData('geodanmark', 'bygning', '2026-09-16') // Content-Length/ETag
 const part = await snapshots.getRelationSnapshotData('geodanmark', 'bygning', '2026-09-16', { range: [0, 1023] })
 const file = await snapshots.getRelationSnapshotFile('geodanmark', 'bygning', '2026-09-16', 'metadata-<id>.json')
+
+// One specific output format ('parquet' | 'flatgeobuf'). The snapshot's
+// `formats` array says what was produced (status/size/media_type/href).
+const fgbUrl = snapshots.getRelationSnapshotDataFormatUrl('geodanmark', 'bygning', '2026-09-16', 'flatgeobuf')
+const fgb = await snapshots.getRelationSnapshotDataFormat('geodanmark', 'bygning', '2026-09-16', 'flatgeobuf', { range: [0, 1023] })
 ```
 
 The job API is super-user only (403 `SUPER_USER_ONLY`); creating throws 404 (relation not found), 409 (a snapshot of the relation is already pending or running) or 501 (snapshot storage not configured). The read API needs read access to the relation — sub-users with a deny/limit geofence rule get 403 `GEOFENCE_RULES_APPLY`. A snapshot with several data files answers 409 `MULTI_FILE_SNAPSHOT` on `/data`; list `files` in the metadata and fetch them with `getRelationSnapshotFile`.

@@ -209,6 +209,52 @@ describe('Snapshots read API', () => {
     expect(res.headers.get('content-length')).toBe('1000');
   });
 
+  it('postSnapshot sends requested formats', async () => {
+    const fetchFn = mockFetch(202, { id: 'a1', status: 'pending', _links: { self: '/api/v4/snapshots/a1' } });
+    const snapshots = new Snapshots(createHttp(fetchFn));
+
+    await snapshots.postSnapshot({ schema: 'geodanmark', relation: 'bygning', formats: ['parquet', 'flatgeobuf'] });
+
+    const [, init] = lastCall(fetchFn);
+    expect(JSON.parse(init.body as string)).toEqual({
+      schema: 'geodanmark', relation: 'bygning', formats: ['parquet', 'flatgeobuf'],
+    });
+  });
+
+  it('getRelationSnapshotDataFormat fetches one format with range support', async () => {
+    const fetchFn = mockFetch(206, null, { 'content-type': 'application/flatgeobuf' });
+    const snapshots = new Snapshots(createHttp(fetchFn));
+
+    const res = await snapshots.getRelationSnapshotDataFormat('geodanmark', 'bygning', '2026-09-16', 'flatgeobuf', { range: [0, 99] });
+
+    const [url, init] = lastCall(fetchFn);
+    expect(url).toBe('https://api.example.com/api/v4/schemas/geodanmark/relations/bygning/snapshots/2026-09-16/data/flatgeobuf');
+    expect(init.method).toBe('GET');
+    expect((init.headers as Record<string, string>)['Range']).toBe('bytes=0-99');
+    expect(res.status).toBe(206);
+  });
+
+  it('headRelationSnapshotDataFormat sends HEAD', async () => {
+    const fetchFn = mockFetch(200, null, { 'content-length': '500' });
+    const snapshots = new Snapshots(createHttp(fetchFn));
+
+    await snapshots.headRelationSnapshotDataFormat('geodanmark', 'bygning', '2026-09-16', 'parquet');
+
+    const [url, init] = lastCall(fetchFn);
+    expect(url).toBe('https://api.example.com/api/v4/schemas/geodanmark/relations/bygning/snapshots/2026-09-16/data/parquet');
+    expect(init.method).toBe('HEAD');
+  });
+
+  it('getRelationSnapshotDataFormatUrl returns the absolute URL without fetching', () => {
+    const fetchFn = mockFetch(200, null);
+    const snapshots = new Snapshots(createHttp(fetchFn));
+
+    const url = snapshots.getRelationSnapshotDataFormatUrl('geodanmark', 'bygning', '2026-09-16', 'flatgeobuf');
+
+    expect(url).toBe('https://api.example.com/api/v4/schemas/geodanmark/relations/bygning/snapshots/2026-09-16/data/flatgeobuf');
+    expect(fetchFn).not.toHaveBeenCalled();
+  });
+
   it('getRelationSnapshotFile fetches one file by catalog name', async () => {
     const fetchFn = mockFetch(200, null);
     const snapshots = new Snapshots(createHttp(fetchFn));

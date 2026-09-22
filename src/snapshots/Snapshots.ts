@@ -9,7 +9,31 @@ import type { CentiaHttpClient } from '../http/client';
 /** Status of a snapshot job. */
 export type SnapshotStatus = 'pending' | 'running' | 'succeeded' | 'failed' | 'superseded';
 
-/** A request to snapshot a table or view to Parquet on S3. */
+/** A snapshot output format id. Known ids: `parquet`, `flatgeobuf` — extensible server-side. */
+export type SnapshotFormat = 'parquet' | 'flatgeobuf' | (string & {});
+
+/**
+ * One output format of a snapshot and what became of it: `requested` before
+ * the worker ran, then `produced` (with file, size and media type) or
+ * `skipped` (with a reason, e.g. a geometry-only format on a relation
+ * without geometry).
+ */
+export interface SnapshotFormatResult {
+  format: SnapshotFormat;
+  status: 'requested' | 'produced' | 'skipped';
+  /** Produced only: file name in the snapshot directory. */
+  file?: string;
+  /** Produced only. */
+  size_bytes?: number;
+  /** Produced only. */
+  media_type?: string;
+  /** Skipped only: why this format could not be produced. */
+  reason?: string;
+  /** Produced only, and only in the relation snapshot read API: where to download this format. */
+  href?: string;
+}
+
+/** A request to snapshot a table or view to S3. */
 export interface SnapshotRequest {
   /** Schema of the relation. */
   schema: string;
@@ -17,6 +41,14 @@ export interface SnapshotRequest {
   relation: string;
   /** Optional EPSG code to reproject to. Omit to keep the native SRID. */
   srs?: number;
+  /**
+   * Output formats to produce, in order. Omit to use the server default
+   * (usually `['parquet']`). Must be non-empty and free of duplicates; a
+   * geometry-only format (FlatGeobuf) is skipped with a reason for a
+   * relation without geometry — unless every requested format needs one,
+   * which is refused up front (400).
+   */
+  formats?: SnapshotFormat[];
 }
 
 /** 202 response from postSnapshot; poll `_links.self` (or getSnapshot) for status. */
@@ -51,6 +83,8 @@ export interface SnapshotJob {
   created: string;
   started: string | null;
   finished: string | null;
+  /** One entry per requested output format and its outcome. */
+  formats: SnapshotFormatResult[];
 }
 
 /** One file of a published snapshot. */
@@ -69,6 +103,8 @@ export interface RelationSnapshot {
   schema_version: string;
   files: RelationSnapshotFile[];
   published: string;
+  /** One entry per requested output format; a produced one carries its `href` under `/data/{format}`. */
+  formats: SnapshotFormatResult[];
 }
 
 /** One published snapshot with full metadata, as returned by the single-date endpoint. */
@@ -232,6 +268,42 @@ export class Snapshots {
   /** HEAD request for the snapshot's Parquet file — Content-Length, Accept-Ranges and ETag without the body. */
   async headRelationSnapshotData(schema: string, relation: string, date: string): Promise<Response> {
     return this.rawGet(this.relationPath(schema, relation, `/${encodeURIComponent(date)}/data`), 'HEAD');
+  }
+
+  /**
+   * Absolute URL of one output format of the snapshot, without fetching it —
+   * for DuckDB/GDAL or a plain fetch.
+   */
+  getRelationSnapshotDataFormatUrl(schema: string, relation: string, date: string, format: SnapshotFormat): string {
+    return `${this.client.baseUrl}/${this.relationPath(schema, relation, `/${encodeURIComponent(date)}/data/${encodeURIComponent(format)}`)}`;
+  }
+
+  /**
+   * Fetch one output format of the snapshot (Content-Type is the format's
+   * media type). Same redirect/range semantics as getRelationSnapshotData.
+   * Throws `CentiaApiError`: 400 (unknown format id), 404 (no snapshot for
+   * that date, or the format was skipped/not requested), 403, 416, 502.
+   */
+  async getRelationSnapshotDataFormat(
+    schema: string,
+    relation: string,
+    date: string,
+    format: SnapshotFormat,
+    options?: SnapshotDataOptions,
+  ): Promise<Response> {
+    return this.rawGet(
+      this.relationPath(schema, relation, `/${encodeURIComponent(date)}/data/${encodeURIComponent(format)}`),
+      'GET',
+      options,
+    );
+  }
+
+  /** HEAD request for one output format of the snapshot. */
+  async headRelationSnapshotDataFormat(schema: string, relation: string, date: string, format: SnapshotFormat): Promise<Response> {
+    return this.rawGet(
+      this.relationPath(schema, relation, `/${encodeURIComponent(date)}/data/${encodeURIComponent(format)}`),
+      'HEAD',
+    );
   }
 
   /**
