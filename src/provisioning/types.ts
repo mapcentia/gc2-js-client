@@ -35,8 +35,8 @@ export interface GetSchemaOptions {
 
 export interface SchemaInfo {
   name: string;
-  /** Number of tables and views in the schema. Present also with namesOnly. */
-  table_count: number;
+  /** Read-only: number of tables and views in the schema. Present also with namesOnly. */
+  _table_count: number;
   tables?: TableInfo[];
   sequences?: SequenceInfo[];
 }
@@ -53,6 +53,12 @@ export interface TableDef {
 
 export interface TableInfo {
   name: string;
+  /** Read-only: what the relation is. */
+  _type: 'TABLE' | 'VIEW' | 'MATERIALIZED VIEW';
+  /** Read-only: whether change events are enabled for the table. */
+  _events: boolean;
+  /** Read-only: number of columns. Present also with namesOnly. */
+  _column_count: number;
   columns?: ColumnInfo[];
   constraints?: ConstraintInfo[];
   indices?: IndexInfo[];

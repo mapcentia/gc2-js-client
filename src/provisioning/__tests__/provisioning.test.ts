@@ -38,15 +38,15 @@ describe('Schemas', () => {
     expect(result.name).toBe('public');
   });
 
-  it('getSchema with namesOnly sends query param and exposes table_count', async () => {
-    const fetchFn = mockFetch(200, { name: 'public', table_count: 12 });
+  it('getSchema with namesOnly sends query param and exposes _table_count', async () => {
+    const fetchFn = mockFetch(200, { name: 'public', _table_count: 12 });
     const client = createClient(fetchFn);
 
     const result = await client.provisioning.schemas.getSchema('public', { namesOnly: true });
 
     const [url] = lastCall(fetchFn);
     expect(url).toBe('https://api.example.com/api/v4/schemas/public?namesOnly=true');
-    expect(result.table_count).toBe(12);
+    expect(result._table_count).toBe(12);
   });
 
   it('getSchema without schema name lists all schemas', async () => {
@@ -140,14 +140,17 @@ describe('Tables', () => {
     expect(result.name).toBe('users');
   });
 
-  it('getTable with namesOnly sends query param', async () => {
-    const fetchFn = mockFetch(200, [{ name: 'users' }]);
+  it('getTable with namesOnly sends query param and exposes catalog fields', async () => {
+    const fetchFn = mockFetch(200, [{ name: 'users', _type: 'TABLE', _events: false, _column_count: 7 }]);
     const client = createClient(fetchFn);
 
-    await client.provisioning.tables.getTable('public', undefined, { namesOnly: true });
+    const result = await client.provisioning.tables.getTable('public', undefined, { namesOnly: true });
 
     const [url] = lastCall(fetchFn);
     expect(url).toBe('https://api.example.com/api/v4/schemas/public/tables?namesOnly=true');
+    expect(result[0]._type).toBe('TABLE');
+    expect(result[0]._events).toBe(false);
+    expect(result[0]._column_count).toBe(7);
   });
 
   it('getTable with table name and namesOnly sends query param', async () => {
