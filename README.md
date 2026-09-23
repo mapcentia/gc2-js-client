@@ -636,6 +636,11 @@ const jobs = await snapshots.getSnapshots({ schema: 'geodanmark', relation: 'byg
 const published = await snapshots.getRelationSnapshots('geodanmark', 'bygning') // newest first
 const meta = await snapshots.getRelationSnapshot('geodanmark', 'bygning', '2026-09-16')
 
+// 'latest' resolves to the newest published snapshot in every date-taking
+// method and URL builder; the metadata still carries the real snapshot_date.
+const newest = await snapshots.getRelationSnapshot('geodanmark', 'bygning', 'latest')
+const latestUrl = snapshots.getRelationSnapshotDataUrl('geodanmark', 'bygning', 'latest')
+
 // The Parquet file itself. dataUrl for DuckDB/GDAL/plain fetch; the data
 // methods return the raw Response (stream or buffer it yourself) and follow
 // the 302 redirect to presigned storage URLs.

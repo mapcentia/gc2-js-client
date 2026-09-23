@@ -151,6 +151,21 @@ describe('Snapshots read API', () => {
     expect(url).toBe('https://api.example.com/api/v4/schemas/geodanmark/relations/bygning/snapshots/2026-09-16');
   });
 
+  it("getRelationSnapshot accepts 'latest' and exposes _links.latest", async () => {
+    const details = {
+      snapshot_date: '2026-09-16',
+      _links: { data: '/api/v4/schemas/geodanmark/relations/bygning/snapshots/2026-09-16/data', files: [], latest: '/api/v4/schemas/geodanmark/relations/bygning/snapshots/latest' },
+    };
+    const fetchFn = mockFetch(200, details);
+    const snapshots = new Snapshots(createHttp(fetchFn));
+
+    const result = await snapshots.getRelationSnapshot('geodanmark', 'bygning', 'latest');
+
+    const [url] = lastCall(fetchFn);
+    expect(url).toBe('https://api.example.com/api/v4/schemas/geodanmark/relations/bygning/snapshots/latest');
+    expect(result._links.latest).toBe('/api/v4/schemas/geodanmark/relations/bygning/snapshots/latest');
+  });
+
   it('getRelationSnapshotDataUrl returns the absolute URL without fetching', () => {
     const fetchFn = mockFetch(200, null);
     const snapshots = new Snapshots(createHttp(fetchFn));

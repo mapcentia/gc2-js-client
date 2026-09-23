@@ -12,6 +12,9 @@ export type SnapshotStatus = 'pending' | 'running' | 'succeeded' | 'failed' | 's
 /** A snapshot output format id. Known ids: `parquet`, `flatgeobuf` — extensible server-side. */
 export type SnapshotFormat = 'parquet' | 'flatgeobuf' | (string & {});
 
+/** A snapshot date (`YYYY-MM-DD`), or `latest` for the newest published snapshot. */
+export type SnapshotDate = 'latest' | (string & {});
+
 /**
  * One output format of a snapshot and what became of it: `requested` before
  * the worker ran, then `produced` (with file, size and media type) or
@@ -112,7 +115,8 @@ export interface RelationSnapshotDetails extends RelationSnapshot {
   srs: number | null;
   relation_schema: SnapshotColumn[] | null;
   crs: string | null;
-  _links: { data: string; files: { name: string; href: string }[] };
+  /** `latest` is the fixed URL that always resolves to the newest published snapshot. */
+  _links: { data: string; files: { name: string; href: string }[]; latest?: string };
 }
 
 /** Filters for getSnapshots. */
@@ -232,8 +236,13 @@ export class Snapshots {
     });
   }
 
-  /** Get one published snapshot (metadata) by date (`YYYY-MM-DD`). */
-  async getRelationSnapshot(schema: string, relation: string, date: string): Promise<RelationSnapshotDetails> {
+  /**
+   * Get one published snapshot (metadata) by date (`YYYY-MM-DD`), or pass
+   * `latest` for the newest published snapshot — `latest` works the same
+   * way in every data/file method and URL builder. The response still
+   * carries the real `snapshot_date` and dated hrefs, plus `_links.latest`.
+   */
+  async getRelationSnapshot(schema: string, relation: string, date: SnapshotDate): Promise<RelationSnapshotDetails> {
     return this.client.request({
       path: this.relationPath(schema, relation, `/${encodeURIComponent(date)}`),
       method: 'GET',
@@ -245,7 +254,7 @@ export class Snapshots {
    * DuckDB/GDAL or a plain fetch. Authorization travels in the request
    * header, so protected relations need the caller to attach the token.
    */
-  getRelationSnapshotDataUrl(schema: string, relation: string, date: string): string {
+  getRelationSnapshotDataUrl(schema: string, relation: string, date: SnapshotDate): string {
     return `${this.client.baseUrl}/${this.relationPath(schema, relation, `/${encodeURIComponent(date)}/data`)}`;
   }
 
@@ -259,14 +268,14 @@ export class Snapshots {
   async getRelationSnapshotData(
     schema: string,
     relation: string,
-    date: string,
+    date: SnapshotDate,
     options?: SnapshotDataOptions,
   ): Promise<Response> {
     return this.rawGet(this.relationPath(schema, relation, `/${encodeURIComponent(date)}/data`), 'GET', options);
   }
 
   /** HEAD request for the snapshot's Parquet file — Content-Length, Accept-Ranges and ETag without the body. */
-  async headRelationSnapshotData(schema: string, relation: string, date: string): Promise<Response> {
+  async headRelationSnapshotData(schema: string, relation: string, date: SnapshotDate): Promise<Response> {
     return this.rawGet(this.relationPath(schema, relation, `/${encodeURIComponent(date)}/data`), 'HEAD');
   }
 
@@ -274,7 +283,7 @@ export class Snapshots {
    * Absolute URL of one output format of the snapshot, without fetching it —
    * for DuckDB/GDAL or a plain fetch.
    */
-  getRelationSnapshotDataFormatUrl(schema: string, relation: string, date: string, format: SnapshotFormat): string {
+  getRelationSnapshotDataFormatUrl(schema: string, relation: string, date: SnapshotDate, format: SnapshotFormat): string {
     return `${this.client.baseUrl}/${this.relationPath(schema, relation, `/${encodeURIComponent(date)}/data/${encodeURIComponent(format)}`)}`;
   }
 
@@ -287,7 +296,7 @@ export class Snapshots {
   async getRelationSnapshotDataFormat(
     schema: string,
     relation: string,
-    date: string,
+    date: SnapshotDate,
     format: SnapshotFormat,
     options?: SnapshotDataOptions,
   ): Promise<Response> {
@@ -299,7 +308,7 @@ export class Snapshots {
   }
 
   /** HEAD request for one output format of the snapshot. */
-  async headRelationSnapshotDataFormat(schema: string, relation: string, date: string, format: SnapshotFormat): Promise<Response> {
+  async headRelationSnapshotDataFormat(schema: string, relation: string, date: SnapshotDate, format: SnapshotFormat): Promise<Response> {
     return this.rawGet(
       this.relationPath(schema, relation, `/${encodeURIComponent(date)}/data/${encodeURIComponent(format)}`),
       'HEAD',
@@ -314,7 +323,7 @@ export class Snapshots {
   async getRelationSnapshotFile(
     schema: string,
     relation: string,
-    date: string,
+    date: SnapshotDate,
     file: string,
     options?: SnapshotDataOptions,
   ): Promise<Response> {
@@ -326,7 +335,7 @@ export class Snapshots {
   }
 
   /** HEAD request for one file of the snapshot. */
-  async headRelationSnapshotFile(schema: string, relation: string, date: string, file: string): Promise<Response> {
+  async headRelationSnapshotFile(schema: string, relation: string, date: SnapshotDate, file: string): Promise<Response> {
     return this.rawGet(
       this.relationPath(schema, relation, `/${encodeURIComponent(date)}/files/${encodeURIComponent(file)}`),
       'HEAD',
