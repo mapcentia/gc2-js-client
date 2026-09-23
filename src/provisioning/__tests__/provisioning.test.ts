@@ -38,14 +38,15 @@ describe('Schemas', () => {
     expect(result.name).toBe('public');
   });
 
-  it('getSchema with namesOnly sends query param', async () => {
-    const fetchFn = mockFetch(200, { name: 'public' });
+  it('getSchema with namesOnly sends query param and exposes table_count', async () => {
+    const fetchFn = mockFetch(200, { name: 'public', table_count: 12 });
     const client = createClient(fetchFn);
 
-    await client.provisioning.schemas.getSchema('public', { namesOnly: true });
+    const result = await client.provisioning.schemas.getSchema('public', { namesOnly: true });
 
     const [url] = lastCall(fetchFn);
     expect(url).toBe('https://api.example.com/api/v4/schemas/public?namesOnly=true');
+    expect(result.table_count).toBe(12);
   });
 
   it('getSchema without schema name lists all schemas', async () => {

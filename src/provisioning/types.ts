@@ -35,6 +35,8 @@ export interface GetSchemaOptions {
 
 export interface SchemaInfo {
   name: string;
+  /** Number of tables and views in the schema. Present also with namesOnly. */
+  table_count: number;
   tables?: TableInfo[];
   sequences?: SequenceInfo[];
 }
