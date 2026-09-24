@@ -45,6 +45,75 @@ describe('MetadataWrite', () => {
     });
     expect(res).toEqual({ location: '/api/v4/meta' });
   });
+
+  it('getMetaData sends GET to /meta/{query} with noRestriction', async () => {
+    const body = {
+      relations: {
+        'geus.boringer': {
+          sort_id: 0,
+          _schema: 'geus',
+          _rel: 'boringer',
+          _srid: 25832,
+          fields: { id: { _type: 'integer', alias: null, queryable: false } },
+        },
+      },
+    };
+    const fetchFn = mockFetch(200, body);
+    const client = createClient(fetchFn);
+
+    const res = await client.provisioning.metadata.getMetaData('geus.boringer', { noRestriction: true });
+
+    const [url, init] = lastCall(fetchFn);
+    expect(url).toBe('https://api.example.com/api/v4/meta/geus.boringer?noRestriction=true');
+    expect(init.method).toBe('GET');
+    expect(res).toEqual(body);
+  });
+
+  it('getMetaData joins an array query with commas and keeps tag: prefix', async () => {
+    const fetchFn = mockFetch(200, { relations: {} });
+    const client = createClient(fetchFn);
+
+    await client.provisioning.metadata.getMetaData(['public', 'tag:roads']);
+
+    const [url] = lastCall(fetchFn);
+    expect(url).toBe('https://api.example.com/api/v4/meta/public,tag:roads');
+  });
+
+  it('getMetaData normalises an empty relations array to an object', async () => {
+    const fetchFn = mockFetch(200, { relations: [] });
+    const client = createClient(fetchFn);
+
+    const res = await client.provisioning.metadata.getMetaData('public');
+
+    expect(res).toEqual({ relations: {} });
+  });
+
+  it('getMetaConfig sends GET to /meta-config and returns fieldsets', async () => {
+    const config = [
+      {
+        fieldsetName: 'Layer type',
+        fields: [
+          {
+            name: 'vidi_layer_type',
+            type: 'checkboxgroup',
+            title: 'Type',
+            values: [{ name: 'Vector', value: 'v' }],
+            default: 't',
+          },
+          { name: 'vidi_layer_editable', type: 'checkbox', title: 'Editable', default: false },
+        ],
+      },
+    ];
+    const fetchFn = mockFetch(200, config);
+    const client = createClient(fetchFn);
+
+    const res = await client.provisioning.metadata.getMetaConfig();
+
+    const [url, init] = lastCall(fetchFn);
+    expect(url).toBe('https://api.example.com/api/v4/meta-config');
+    expect(init.method).toBe('GET');
+    expect(res).toEqual(config);
+  });
 });
 
 describe('TypeScriptInterfaces', () => {

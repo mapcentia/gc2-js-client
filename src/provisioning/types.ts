@@ -498,6 +498,91 @@ export interface PatchMetadataRequest {
   relations: Record<string, MetadataRelationInfo>;
 }
 
+export interface GetMetaDataOptions {
+  /** Leave out column restrictions on the returned metadata. Restrictions can be quite extensive. */
+  noRestriction?: boolean;
+}
+
+/**
+ * Column metadata as returned by `getMetaData`. The `_`-prefixed keys are read-only
+ * catalog info derived from the database; the rest are the editable metadata.
+ */
+export interface MetadataField {
+  alias?: string | null;
+  queryable?: boolean;
+  sort_id?: number | null;
+  desc?: string | null;
+  properties?: Record<string, unknown> | unknown[] | null;
+  _type?: string;
+  _character_maximum_length?: number | null;
+  _numeric_precision?: number | null;
+  _numeric_scale?: number | null;
+  _max_bytes?: number | null;
+  _restriction?: unknown;
+  _is_nullable?: boolean;
+  _is_unique?: boolean;
+  _default_value?: string | null;
+  [key: string]: unknown;
+}
+
+/**
+ * Relation metadata as returned by `getMetaData`. The `_`-prefixed keys are read-only
+ * catalog info; unset editable keys may be omitted by the server.
+ */
+export interface MetadataRelation {
+  title?: string | null;
+  abstract?: string | null;
+  group?: string | null;
+  sort_id?: number | null;
+  tags?: string[] | null;
+  properties?: Record<string, unknown> | null;
+  elasticsearch?: Record<string, unknown> | null;
+  fields: Record<string, MetadataField>;
+  _uuid?: string;
+  _schema?: string;
+  _rel?: string;
+  _rel_type?: string;
+  _pkey?: string | null;
+  _geometry_column?: string | null;
+  _geom_type?: string | null;
+  _coord_dimension?: number | null;
+  _srid?: number | null;
+  _authentication?: string;
+  [key: string]: unknown;
+}
+
+export interface MetadataResponse {
+  /** Keyed by schema-qualified relation name. */
+  relations: Record<string, MetadataRelation>;
+}
+
+/** Form control a meta config field renders as. A `checkboxgroup` stores its selection as one comma separated string. */
+export type MetaConfigFieldType = 'text' | 'textarea' | 'checkbox' | 'combo' | 'checkboxgroup';
+
+/** One choice of a `combo` or `checkboxgroup` field. */
+export interface MetaConfigFieldValue {
+  /** Label shown to the user. */
+  name: string;
+  /** Value stored in the relation properties. */
+  value: string;
+}
+
+/** One field of a fieldset. `name` is the key it is stored under in the relation `properties` object. */
+export interface MetaConfigField {
+  name: string;
+  type: MetaConfigFieldType;
+  title: string;
+  values?: MetaConfigFieldValue[];
+  /** Used when the relation has no stored value. A boolean for `checkbox`, a string otherwise. */
+  default?: boolean | string;
+}
+
+/** A named group of fields, rendered as one fieldset in the relation properties form. */
+export interface MetaConfigFieldset {
+  fieldsetName: string;
+  fields: MetaConfigField[];
+}
+
 // ===== File Import types =====
 
 export interface FileUploadOptions {
