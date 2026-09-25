@@ -113,6 +113,25 @@ describe('Scheduler jobs', () => {
     expect(JSON.parse(init.body as string).snapshot_formats).toEqual(['parquet', 'flatgeobuf']);
   });
 
+  it('postSchedulerJob and patchSchedulerJob send use_sortby', async () => {
+    const fetchFn = mockFetch(303, null, { location: '/api/v4/scheduler/jobs/5497' });
+    const scheduler = new Scheduler(createHttp(fetchFn));
+
+    await scheduler.patchSchedulerJob(5497, { use_sortby: false });
+
+    const [, init] = lastCall(fetchFn);
+    expect(JSON.parse(init.body as string)).toEqual({ use_sortby: false });
+  });
+
+  it('getSchedulerJob exposes use_sortby', async () => {
+    const fetchFn = mockFetch(200, { ...job, use_sortby: false });
+    const scheduler = new Scheduler(createHttp(fetchFn));
+
+    const result = await scheduler.getSchedulerJob(5497);
+
+    expect(result.use_sortby).toBe(false);
+  });
+
   it('patchSchedulerJob can reset snapshot_formats with explicit null', async () => {
     const fetchFn = mockFetch(303, null, { location: '/api/v4/scheduler/jobs/5497' });
     const scheduler = new Scheduler(createHttp(fetchFn));

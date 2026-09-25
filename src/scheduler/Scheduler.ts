@@ -35,6 +35,19 @@ export interface SchedulerJobInput {
    * explicit `null` resets to the default.
    */
   snapshot_formats?: SnapshotFormat[] | null;
+  /**
+   * Add a sortBy when paging a WFS 2.0.0 GetFeature URL with
+   * startIndex/count, so pages neither overlap nor skip rows. Set false for
+   * servers that reject sortBy — they must then page in a stable order
+   * themselves. Default true; irrelevant for non-paged or non-2.0.0 jobs.
+   * A PATCH that omits it keeps the stored value.
+   *
+   * Requires a GC2 server with the field: older servers reject unknown
+   * fields with 400 INPUT_VALIDATION_ERROR on both POST and PATCH. To work
+   * against both, only send it when the server's jobs carry the key, e.g.
+   * `'use_sortby' in job` on a job from getSchedulerJob(s).
+   */
+  use_sortby?: boolean;
 }
 
 /** Partial update of a scheduler job. */
@@ -60,6 +73,8 @@ export interface SchedulerJob {
   snapshot: boolean;
   /** Formats of the snapshot queued after a successful import; null means the server default. */
   snapshot_formats: SnapshotFormat[] | null;
+  /** Whether paged WFS 2.0.0 imports add a sortBy. Absent from servers that predate the field. */
+  use_sortby: boolean;
   lastcheck: boolean | null;
   lasttimestamp: string | null;
   lastrun: string | null;
