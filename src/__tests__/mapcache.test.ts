@@ -76,25 +76,72 @@ describe('Mapcache', () => {
     );
   });
 
-  it('deleteMapcacheTileset sends DELETE 202 and returns the job info', async () => {
+  it('deleteMapcacheTileset returns the seed job info on a scoped delete (202)', async () => {
     const job = {
       success: true,
-      message: 'Tile cache deletion started',
+      mode: 'seed',
+      message: 'Scoped tile cache deletion started',
+      backend: 'sqlite3',
       uuid: 'abc-123',
       pid: 4711,
       tileset: 'my_schema.roads',
       grid: 'g20',
-      scope: { bbox: null, zoom: null },
+      scope: { bbox: null, zoom: '0,12' },
+      _links: { self: '/api/v4/mapcache/database/my_database/tileset/my_schema.roads' },
     };
     const fetchFn = mockFetch(202, JSON.stringify(job));
     const mapcache = new Mapcache(createHttp(fetchFn));
 
-    const result = await mapcache.deleteMapcacheTileset('my_database', 'my_schema.roads');
+    const result = await mapcache.deleteMapcacheTileset('my_database', 'my_schema.roads', { zoom: '0,12' });
 
     const [url, init] = lastCall(fetchFn);
-    expect(url).toBe('https://api.example.com/api/v4/mapcache/database/my_database/tileset/my_schema.roads');
+    expect(url).toBe('https://api.example.com/api/v4/mapcache/database/my_database/tileset/my_schema.roads?zoom=0%2C12');
     expect(init.method).toBe('DELETE');
     expect(result).toEqual(job);
+  });
+
+  it('deleteMapcacheTileset resolves on a synchronous full wipe (200)', async () => {
+    const wiped = {
+      success: true,
+      mode: 'wipe',
+      message: 'Tile cache deleted',
+      backend: 'sqlite3',
+      tileset: 'my_schema.roads',
+      removed: 1234,
+    };
+    const fetchFn = mockFetch(200, JSON.stringify(wiped));
+    const mapcache = new Mapcache(createHttp(fetchFn));
+
+    const result = await mapcache.deleteMapcacheTileset('my_database', 'my_schema.roads');
+
+    expect(result).toEqual(wiped);
+    if (result.mode === 'wipe' && 'removed' in result) {
+      expect(result.removed).toBe(1234);
+    }
+  });
+
+  it('deleteMapcacheTileset resolves on a background disk wipe (202)', async () => {
+    const started = {
+      success: true,
+      mode: 'wipe',
+      message: 'Tile cache deletion started (disk directory removed in background)',
+      backend: 'disk',
+      uuid: 'def-456',
+      tileset: 'my_schema.roads',
+    };
+    const fetchFn = mockFetch(202, JSON.stringify(started));
+    const mapcache = new Mapcache(createHttp(fetchFn));
+
+    const result = await mapcache.deleteMapcacheTileset('my_database', 'my_schema.roads');
+
+    expect(result).toEqual(started);
+  });
+
+  it('deleteMapcacheTileset still throws on other statuses', async () => {
+    const fetchFn = mockFetch(400, JSON.stringify({ message: 'Full delete not supported for s3' }));
+    const mapcache = new Mapcache(createHttp(fetchFn));
+
+    await expect(mapcache.deleteMapcacheTileset('my_database', 'my_schema.roads')).rejects.toMatchObject({ status: 400 });
   });
 
   it('deleteMapcacheTileset scopes by bbox, zoom and grid', async () => {

@@ -7,6 +7,11 @@
 import type { CentiaClientConfig, CentiaAuth, RequestOptions, RawRequestOptions, FullResponse } from './types';
 import { CentiaApiError } from './errors';
 
+function expectedStatuses(expected: number | number[] | undefined): number[] {
+  if (expected === undefined) return [200];
+  return Array.isArray(expected) ? expected : [expected];
+}
+
 /**
  * Unified HTTP client for the Centia API.
  * Works in both Node.js and browser environments.
@@ -61,8 +66,7 @@ export class CentiaHttpClient {
     // with status 0 and inaccessible headers. Detect this and synthesize
     // the expected result instead of falling through to handleResponse.
     if (response.type === 'opaqueredirect') {
-      const expected = opts.expectedStatus ?? 200;
-      if (expected === 303) {
+      if (expectedStatuses(opts.expectedStatus).includes(303)) {
         return {
           body: null as T,
           status: 303,
@@ -193,7 +197,7 @@ export class CentiaHttpClient {
     opts: RequestOptions,
     url: string,
   ): Promise<T> {
-    const expectedStatus = opts.expectedStatus ?? 200;
+    const expected = expectedStatuses(opts.expectedStatus);
 
     let bodyText = '';
     try {
@@ -211,7 +215,7 @@ export class CentiaHttpClient {
       }
     }
 
-    if (response.status !== expectedStatus) {
+    if (!expected.includes(response.status)) {
       const msg = (parsed?.message ?? parsed?.error ?? bodyText)
         || `Unexpected status ${response.status}`;
 

@@ -19,16 +19,49 @@ export interface DeleteMapcacheTilesetOptions {
   grid?: string;
 }
 
-/** 202 response from a tileset deletion: the background job that was started. */
-export interface MapcacheTilesetDeleteResult {
+/** 202 from a scoped delete (bbox and/or zoom): a background mapcache_seed job. */
+export interface MapcacheTilesetSeedJob {
   success: boolean;
+  mode: 'seed';
   message: string;
+  backend: string;
   uuid: string;
   pid: number;
   tileset: string;
   grid: string;
   scope: { bbox: string | null; zoom: string | null };
+  _links: { self: string };
 }
+
+/** 202 from a full delete on a disk backend: the directory is removed in the background. */
+export interface MapcacheTilesetWipeStarted {
+  success: boolean;
+  mode: 'wipe';
+  message: string;
+  backend: 'disk';
+  uuid: string;
+  tileset: string;
+}
+
+/** 200 from a full delete that wiped the store synchronously (sqlite/bdb, or the disk fallback). */
+export interface MapcacheTilesetWipeCompleted {
+  success: boolean;
+  mode: 'wipe';
+  message: string;
+  backend: string;
+  tileset: string;
+  /** Tiles removed (sqlite), or 1/0 for whether a directory existed (bdb/disk). */
+  removed: number;
+}
+
+/**
+ * Result of deleteMapcacheTileset. Narrow on `mode`, then on `'removed' in result`
+ * to tell a completed wipe from one still running in the background.
+ */
+export type MapcacheTilesetDeleteResult =
+  | MapcacheTilesetSeedJob
+  | MapcacheTilesetWipeStarted
+  | MapcacheTilesetWipeCompleted;
 
 function toQuery(params?: MapcacheParams): Record<string, string> | undefined {
   if (!params) return undefined;
@@ -89,9 +122,12 @@ export class Mapcache {
    */
   /**
    * Delete a tileset's cached tiles (optionally scoped by extent and zoom).
-   * Runs `mapcache_seed -m delete` as a background job on the server and
-   * returns the started job's info. Requires write/owner authorization for
-   * the tileset's layer.
+   * A scoped delete runs `mapcache_seed -m delete` as a background job (202,
+   * `mode: 'seed'`). A full delete wipes the backend store: synchronously
+   * for sqlite/bdb (200, `mode: 'wipe'` with `removed`), in the background
+   * for disk (202, `mode: 'wipe'` with `uuid`). s3/memcache reject a full
+   * delete with 400. Requires write/owner authorization for the tileset's
+   * layer.
    *
    * `tileset` is the layer "schema.table" (vector variants "schema.table.mvt"/".json").
    */
@@ -108,7 +144,7 @@ export class Mapcache {
       path: `api/v4/mapcache/database/${encodeURIComponent(database)}/tileset/${encodeURIComponent(tileset)}`,
       method: 'DELETE',
       query: Object.keys(query).length > 0 ? query : undefined,
-      expectedStatus: 202,
+      expectedStatus: [200, 202],
     });
   }
 

@@ -41,8 +41,8 @@ export interface RequestOptions {
   contentType?: string | null;
   /** Accept header. Defaults to "application/json". */
   accept?: string;
-  /** Expected HTTP status code. Defaults to 200. Non-match throws CentiaApiError. */
-  expectedStatus?: number;
+  /** Expected HTTP status code(s). Defaults to 200. Non-match throws CentiaApiError. */
+  expectedStatus?: number | number[];
 }
 
 /** Options for a raw request via CentiaHttpClient.requestRaw(). */

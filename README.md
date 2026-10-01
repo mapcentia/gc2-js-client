@@ -488,15 +488,21 @@ const wmtsCaps = await mapcache.getMapcache('my_database', 'wmts/1.0.0/WMTSCapab
 const template = mapcache.mapcacheUrl('my_database', 'tms/1.0.0/my_schema.my_table@g20/{z}/{x}/{y}.png')
 ```
 
-Cached tiles can be deleted per tileset — optionally scoped by extent and zoom. The deletion runs as a background job on the server (202 Accepted) and requires write/owner authorization for the tileset's layer:
+Cached tiles can be deleted per tileset — optionally scoped by extent and zoom. It requires write/owner authorization for the tileset's layer. A scoped delete runs as a background job (202, `mode: 'seed'`); a full delete wipes the backend store, synchronously for sqlite/bdb (200, `mode: 'wipe'` with `removed`) or in the background for disk (202, `mode: 'wipe'` with `uuid`). s3/memcache reject a full delete with 400.
 
 ```ts
-const job = await mapcache.deleteMapcacheTileset('my_database', 'my_schema.roads', {
+const result = await mapcache.deleteMapcacheTileset('my_database', 'my_schema.roads', {
   bbox: '890000,7260000,1730000,7870000', // optional, in the grid SRS
   zoom: '0,12',                          // optional, minzoom,maxzoom or a single zoom
   grid: 'g20',                           // optional, defaults to g20
 })
-// { success: true, uuid: '...', pid: 4711, tileset: 'my_schema.roads', ... }
+if (result.mode === 'seed') {
+  // background job: result.uuid, result.pid
+} else if ('removed' in result) {
+  // wiped synchronously: result.removed
+} else {
+  // disk wipe running in the background: result.uuid
+}
 ```
 
 The endpoint accepts anonymous, HTTP Basic and Bearer token requests; tile requests are authorized against the tileset's layer. Authorization travels in the `Authorization` header — it cannot be embedded in the URL — so for protected tilesets, inject the header per tile request via the map library's request hook (e.g. MapLibre's `transformRequest` or OpenLayers' `tileLoadFunction`).

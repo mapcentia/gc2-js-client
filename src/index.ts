@@ -176,7 +176,7 @@ export type {
 } from "./provisioning";
 export type { OwsParams } from "./ogc/Ows";
 export type { WfsGetParams, WfsPathOptions } from "./ogc/Wfs";
-export type { MapcacheParams, DeleteMapcacheTilesetOptions, MapcacheTilesetDeleteResult } from "./ogc/Mapcache";
+export type { MapcacheParams, DeleteMapcacheTilesetOptions, MapcacheTilesetDeleteResult, MapcacheTilesetSeedJob, MapcacheTilesetWipeStarted, MapcacheTilesetWipeCompleted } from "./ogc/Mapcache";
 export { OGC_CRS84, ogcEpsgCrs } from "./ogc/Ogc";
 export type { OgcLink, OgcLandingPage, OgcConformance, OgcExtent, OgcCollection, OgcCollections, OgcFeature, OgcFeatureCollection, OgcCollectionsOptions, OgcBbox, OgcSpatialOptions, OgcItemsOptions, OgcItemOptions, OgcMapOptions } from "./ogc/Ogc";
 export type { KeyvalueEntry, CreateKeyvalueRequest, PatchKeyvalueRequest, KeyvalueProjection } from "./keyvalue/Keyvalue";
