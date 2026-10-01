@@ -514,7 +514,7 @@ const wmtsCaps = await mapcache.getMapcache('my_database', 'wmts/1.0.0/WMTSCapab
 const template = mapcache.mapcacheUrl('my_database', 'tms/1.0.0/my_schema.my_table@g20/{z}/{x}/{y}.png')
 ```
 
-Cached tiles can be deleted per tileset — optionally scoped by extent and zoom. It requires write/owner authorization for the tileset's layer. A scoped delete runs as a background job (202, `mode: 'seed'`); a full delete wipes the backend store, synchronously for sqlite/bdb (200, `mode: 'wipe'` with `removed`) or in the background for disk (202, `mode: 'wipe'` with `uuid`). s3/memcache reject a full delete with 400.
+Cached tiles can be deleted per tileset — optionally scoped by extent and zoom. It requires write/owner authorization for the tileset's layer. A scoped delete runs as a background job (202, `mode: 'seed'`); a full delete wipes the backend store, synchronously for sqlite/bdb (200, `mode: 'wipe'` with `removed`) or in the background for disk (202, `mode: 'wipe'` with `uuid`). s3/memcache reject a full delete with 400 `UNSUPPORTED_BACKEND`; a scoped delete works for every backend. `tileset` may also be a bare schema name or `<schema>.mvt` — the merged per-schema tileset — which requires a super-user (403 `SUPER_USER_ONLY`) and an existing schema (404 `SCHEMA_NOT_FOUND`).
 
 ```ts
 const result = await mapcache.deleteMapcacheTileset('my_database', 'my_schema.roads', {

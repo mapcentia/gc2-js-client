@@ -137,6 +137,26 @@ describe('Mapcache', () => {
     expect(result).toEqual(started);
   });
 
+  it('deleteMapcacheTileset clears a merged per-schema tileset by its bare schema name', async () => {
+    const wiped = { success: true, mode: 'wipe', message: 'Tile cache deleted', backend: 'sqlite', tileset: 'dagi', removed: 42 };
+    const fetchFn = mockFetch(200, JSON.stringify(wiped));
+    const mapcache = new Mapcache(createHttp(fetchFn));
+
+    const result = await mapcache.deleteMapcacheTileset('my_database', 'dagi');
+
+    const [url] = lastCall(fetchFn);
+    expect(url).toBe('https://api.example.com/api/v4/mapcache/database/my_database/tileset/dagi');
+    expect(result).toEqual(wiped);
+  });
+
+  it('deleteMapcacheTileset throws UNSUPPORTED_BACKEND on a full delete of an s3 cache', async () => {
+    const fetchFn = mockFetch(400, JSON.stringify({ message: 'Full delete not supported', code: 'UNSUPPORTED_BACKEND' }));
+    const mapcache = new Mapcache(createHttp(fetchFn));
+
+    await expect(mapcache.deleteMapcacheTileset('my_database', 'dagi'))
+      .rejects.toMatchObject({ status: 400, code: 'UNSUPPORTED_BACKEND' });
+  });
+
   it('deleteMapcacheTileset still throws on other statuses', async () => {
     const fetchFn = mockFetch(400, JSON.stringify({ message: 'Full delete not supported for s3' }));
     const mapcache = new Mapcache(createHttp(fetchFn));

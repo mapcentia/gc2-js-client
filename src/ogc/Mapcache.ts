@@ -126,10 +126,14 @@ export class Mapcache {
    * `mode: 'seed'`). A full delete wipes the backend store: synchronously
    * for sqlite/bdb (200, `mode: 'wipe'` with `removed`), in the background
    * for disk (202, `mode: 'wipe'` with `uuid`). s3/memcache reject a full
-   * delete with 400. Requires write/owner authorization for the tileset's
-   * layer.
+   * delete with 400 `UNSUPPORTED_BACKEND` — a scoped delete works for every
+   * backend and is the only way to clear an s3-backed cache.
    *
-   * `tileset` is the layer "schema.table" (vector variants "schema.table.mvt"/".json").
+   * `tileset` is either a layer tileset, "schema.table" (vector variants
+   * "schema.table.mvt"/".json"), which needs write on the layer; or a merged
+   * per-schema tileset, a bare "schema" or "schema.mvt", which needs a
+   * super-user (403 `SUPER_USER_ONLY` otherwise) and an existing schema
+   * (404 `SCHEMA_NOT_FOUND`).
    */
   async deleteMapcacheTileset(
     database: string,
