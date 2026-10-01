@@ -706,6 +706,44 @@ const { signal } = await scheduler.deleteSchedulerRun(runs[0].uuid)
 
 Errors throw `CentiaApiError` with status/code: 400 `INVALID_CRON_FIELD`/`INPUT_VALIDATION_ERROR`, 404 `JOB_NOT_FOUND`/`RUN_NOT_FOUND`, 409 `JOB_RUNNING`.
 
+## Tile seeder
+
+`Tileseeder` wraps `/api/v4/tileseeder/jobs`: queued jobs that pre-render a mapcache tileset. Sub-users may use it; queueing requires write/owner on the tileset's relation. A sub-user sees its own jobs, a super-user every job of the database.
+
+```ts
+import { createCentiaClient, Tileseeder } from '@centia-io/sdk'
+
+const tileseeder = new Tileseeder(http)
+
+// Queue a job (202). Only tileset, grid, zoom_start, zoom_end, name,
+// extent_layer and threads may be sent — other fields are rejected with 400.
+const job = await tileseeder.postSeedJob({
+  tileset: 'myschema.roads',
+  grid: 'g20',          // must be a grid the tileset declares; GC2 generates g20 for every tileset
+  zoom_start: 0,        // zoom levels must lie within the grid's range
+  zoom_end: 12,
+  threads: 2,
+})
+
+// Several at once (all validated before any is queued; an array returns an array)
+const jobs = await tileseeder.postSeedJob([
+  { tileset: 'myschema.roads', grid: 'g20', zoom_start: 0, zoom_end: 10 },
+  { tileset: 'myschema.rivers', grid: 'g20', zoom_start: 0, zoom_end: 10 },
+])
+
+// Poll until status is succeeded, failed or cancelled. getSeedJob includes the log tail.
+const current = await tileseeder.getSeedJob(job.uuid)
+const running = await tileseeder.getSeedJobs({ status: 'running' }) // no log in the list
+
+// Stop: null when cancelled outright or already finished (204),
+// { success, message: 'Stopping', uuid } when a running job's worker must act (202)
+const stopping = await tileseeder.deleteSeedJob(job.uuid)
+```
+
+String fields are limited to 255 characters, and `extent_layer` must be a registered layer the caller can read. An `UNKNOWN_GRID` error lists the grids the tileset does have, so show its message to the user.
+
+Status runs `pending → running → succeeded | failed | cancelled`; `stale` marks a running job whose heartbeat stopped 10 minutes ago. After a 202 from `deleteSeedJob` the job is not stopped yet — poll `getSeedJob` until `status` is `cancelled`. Errors throw `CentiaApiError`: 400 `INVALID_REQUEST`, 403 `INSUFFICIENT_PRIVILEGES`, 404 `JOB_NOT_FOUND`, and on POST 404 `TILESET_NOT_FOUND` (tileset not in the mapcache config) or `NOT_FOUND` (no mapcache config for the database), 429 `TOO_MANY_PENDING`.
+
 ## Error handling
 
 - Network/HTTP errors: thrown as `Error` with the status/body text when available.

@@ -33,6 +33,7 @@ import { Keyvalue } from "./keyvalue/Keyvalue"
 import { Features } from "./features/Features"
 import { Snapshots } from "./snapshots/Snapshots"
 import { Scheduler } from "./scheduler/Scheduler"
+import { Tileseeder } from "./tileseeder/Tileseeder"
 import type {RpcRequest, RpcResponse, GqlRequest, GqlResponse, SqlRequest, SqlResponse} from "./types/pgTypes"
 import type * as PgTypes from "./types/pgTypes"
 import type {Options, CodeFlowOptions, PasswordFlowOptions, GuestFlowOptions} from "./util/utils"
@@ -66,6 +67,7 @@ export {
     Features,
     Snapshots,
     Scheduler,
+    Tileseeder,
     CentiaApiError,
     isCentiaApiError,
 }
@@ -183,6 +185,7 @@ export type { KeyvalueEntry, CreateKeyvalueRequest, PatchKeyvalueRequest, Keyval
 export type { GeoJsonGeometry, GeoJsonFeature, GeoJsonFeatureCollection, FeatureKey, FeatureSrsOptions, PatchFeatureOptions } from "./features/Features";
 export type { SnapshotStatus, SnapshotFormat, SnapshotDate, SnapshotFormatResult, SnapshotRequest, SnapshotAccepted, SnapshotColumn, SnapshotJob, RelationSnapshotFile, RelationSnapshot, RelationSnapshotDetails, GetSnapshotsOptions, WaitForSnapshotOptions, SnapshotDataOptions } from "./snapshots/Snapshots";
 export type { SchedulerRunStatus, SchedulerJobInput, PatchSchedulerJobRequest, SchedulerJob, SchedulerJobsCreated, SchedulerRun, PostSchedulerRunRequest, SchedulerRunAccepted, SchedulerRunStopped, GetSchedulerRunsOptions } from "./scheduler/Scheduler";
+export type { SeedJobStatus, SeedJobInput, SeedJob, GetSeedJobsOptions, SeedJobStopping } from "./tileseeder/Tileseeder";
 export type { SqlNoTokenRequest } from "./SqlNoToken";
 export type { DBSchema, TableDef, ColumnDef, RowForTable, PickRow, RowOfSelect, RowsOfSelect, RowOfRequest, RowsOfRequest } from "./SqlBuilder";
 export type { RowOfApiCall, RowsOfApiCall, RowOfApiMethod, RowsOfApiMethod, ParamsOfApiMethod } from "./Api";
