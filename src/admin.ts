@@ -17,6 +17,7 @@ import ProvisioningClients from './provisioning/Clients';
 import Rules from './provisioning/Rules';
 import Layers from './provisioning/Layers';
 import Maps from './provisioning/Maps';
+import SchemaTileSettings from './provisioning/SchemaTileSettings';
 import Privileges from './provisioning/Privileges';
 import RpcMethods from './provisioning/RpcMethods';
 import Functions from './provisioning/Functions';
@@ -42,6 +43,7 @@ export interface CentiaAdminClient {
     readonly rules: Rules;
     readonly layers: Layers;
     readonly maps: Maps;
+    readonly schemaTileSettings: SchemaTileSettings;
     readonly privileges: Privileges;
     readonly rpcMethods: RpcMethods;
     readonly functions: Functions;
@@ -80,6 +82,7 @@ export function createCentiaAdminClient(config: CentiaClientConfig): CentiaAdmin
       rules: new Rules(http),
       layers: new Layers(http),
       maps: new Maps(http),
+      schemaTileSettings: new SchemaTileSettings(http),
       privileges: new Privileges(http),
       rpcMethods: new RpcMethods(http),
       functions: new Functions(http),

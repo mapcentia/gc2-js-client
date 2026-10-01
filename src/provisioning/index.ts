@@ -21,6 +21,7 @@ export { default as TypeScriptInterfaces } from './TypeScriptInterfaces';
 export { default as FileImport } from './FileImport';
 export { default as GitCommit } from './GitCommit';
 export { default as Maps } from './Maps';
+export { default as SchemaTileSettings } from './SchemaTileSettings';
 
 export type {
   // Shared
@@ -123,6 +124,10 @@ export type {
   FileProcessResponse,
   // Map
   MapConfig,
+  SchemaTileCache,
+  SchemaTileFormat,
+  SchemaTileSettingsInput,
+  SchemaTileSettingsInfo,
   // Git Commit
   CommitRequest,
   CommitResult,

@@ -440,6 +440,32 @@ await maps.patchMap('my_schema', { center: [1386651, 7503372], zoom: 12 })
 await maps.patchMap('my_schema', { extent: null })
 ```
 
+## Schema tile settings (admin client)
+
+Configure a schema's merged tileset — `<schema>` and `<schema>.mvt`, drawn from all of the schema's layers at once — with the same settings a single layer has. Super-user only.
+
+```ts
+const tiles = client.provisioning.schemaTileSettings
+
+// Effective settings (stored values over the defaults). _stored holds only
+// what is actually stored, to tell "set to 60" apart from "defaults to 60".
+const s = await tiles.getSchemaTileSettings('dagi')
+// { schema: 'dagi', schema_exists: true, cache: 'sqlite', format: 'PNG', vector_format: 'MVT',
+//   ttl: 60, meta_size: 3, meta_buffer: 0, ..., _stored: {} }
+
+// Merge: send only what changes; null returns a setting to its default (303)
+await tiles.patchSchemaTileSettings('dagi', { cache: 'disk', ttl: 86400, title: null })
+
+// Back to all defaults (204, idempotent)
+await tiles.deleteSchemaTileSettings('dagi')
+```
+
+`format` is the image tileset's format (`PNG` or `jpeg_low`/`jpeg_medium`/`jpeg_high`); the `.mvt` tileset is always MVT, reported read-only as `vector_format`. PATCH requires the schema to exist (404 `SCHEMA_NOT_FOUND`); GET and DELETE do not, because the settings deliberately survive dropping and re-creating a schema — `schema_exists: false` means they are waiting for it.
+
+**Changing `cache` or `format` does not clear the existing cache.** Tiles already rendered stay in the old backend or format, where they are neither served nor cleaned up. To clear the schema's tileset, pass the bare schema name (or `<schema>.mvt`) to `deleteMapcacheTileset` — see below.
+
+The response also carries `_defaults`: what each patchable setting would be if it were not stored, so a form can show "default is 60" beside a stored value the user is about to clear.
+
 ## OGC services (OWS / WFS)
 
 `Ows` and `Wfs` wrap the OGC endpoints and take a `CentiaHttpClient`:

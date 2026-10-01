@@ -761,3 +761,67 @@ export interface CommitRequest {
 export interface CommitResult {
   [key: string]: unknown;
 }
+
+// ===== Schema tile settings =====
+
+/** Cache backend for a schema's merged tileset. */
+export type SchemaTileCache = 'sqlite' | 'disk' | 'memcache' | 's3';
+
+/** Format of a schema's merged image tileset. The `.mvt` tileset is always MVT and not configurable. */
+export type SchemaTileFormat = 'PNG' | 'jpeg_low' | 'jpeg_medium' | 'jpeg_high';
+
+/**
+ * Settings to merge into a schema's stored tile settings. Send only the
+ * fields you change; an explicit `null` removes a setting, returning it to
+ * its default. Unknown fields are rejected with 400.
+ */
+export interface SchemaTileSettingsInput {
+  cache?: SchemaTileCache | null;
+  format?: SchemaTileFormat | null;
+  /**
+   * Seconds a tile stays valid, at least 1; defaults to 60. Values below 30
+   * are accepted but behave as 30, because the config generator floors them.
+   */
+  ttl?: number | null;
+  /** Seconds after which an existing tile is refreshed on next access, at least 1. */
+  auto_expire?: number | null;
+  /** Metatile size N (N x N tiles per WMS request), 1–16; defaults to 3. */
+  meta_size?: number | null;
+  /** Pixels drawn around each metatile and cropped afterwards, 0–512; defaults to 0. */
+  meta_buffer?: number | null;
+  /** With cache `s3`, the object-path segment for this schema: letters, digits, dot, dash and underscore, not only dots; at most 255 characters. */
+  s3_tile_set?: string | null;
+  /** Shown in WMTS capabilities. Defaults to the schema name. At most 255 characters; must not contain `]]>`. */
+  title?: string | null;
+  /** Shown in WMTS capabilities. At most 2048 characters; must not contain `]]>`. */
+  abstract?: string | null;
+}
+
+/**
+ * A schema's effective tile settings: the stored values laid over the
+ * defaults, so a client sees what the config generator will actually do.
+ */
+export interface SchemaTileSettingsInfo {
+  schema: string;
+  /** False when the settings are waiting for their schema to come back. */
+  schema_exists: boolean;
+  cache: SchemaTileCache;
+  format: SchemaTileFormat;
+  /** The `.mvt` tileset's format: always MVT, reported so a client need not assume it. */
+  vector_format: string;
+  ttl: number;
+  auto_expire: number | null;
+  meta_size: number;
+  meta_buffer: number;
+  s3_tile_set: string | null;
+  title: string;
+  abstract: string;
+  /** Only the settings actually stored — tells "set to 60" apart from "defaults to 60". `{}` when nothing is stored. */
+  _stored: { [K in keyof SchemaTileSettingsInput]?: NonNullable<SchemaTileSettingsInput[K]> };
+  /**
+   * What each patchable setting would be if it were not stored — reported
+   * even for a stored field, so a form can show the default beside the
+   * value the user is about to clear.
+   */
+  _defaults: Pick<SchemaTileSettingsInfo, keyof SchemaTileSettingsInput>;
+}
